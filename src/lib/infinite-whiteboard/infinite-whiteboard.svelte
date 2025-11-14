@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Application } from './Application.svelte.ts';
+	import ViewPort from './elements/view-port.svelte';
 	const { children } = $props();
 
 	let container: HTMLCanvasElement | null = null;
@@ -13,11 +14,14 @@
 <canvas bind:this={container}></canvas>
 
 {#if app.ready}
-	{@render children()}
+	<ViewPort>
+		{@render children()}
+	</ViewPort>
 {/if}
 
 <style>
 	canvas {
 		width: 100%;
+		height: 100vh;
 	}
 </style>

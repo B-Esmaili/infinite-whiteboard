@@ -2,7 +2,7 @@ import { unwrapValue } from "$lib/utils/misc.ts";
 import type { MaybeUnwrap } from "$lib/utils/types.ts";
 import type { ApplicationOptions, Container } from "pixi.js";
 import { Application as PixiApp } from "pixi.js"
-import type { AppContext } from "./types.ts";
+import type { AppContext, ContainerContext } from "./types.ts";
 import { setContext } from "svelte";
 
 export interface ApplicaionProps {
@@ -14,6 +14,7 @@ export class Application {
     #props: ApplicaionProps;
     #app: PixiApp | null = null;
     #appContext = $state<AppContext>({} as AppContext);
+    #containerContext = $state<ContainerContext>({} as ContainerContext);
     constructor(_props: MaybeUnwrap<ApplicaionProps>) {
         this.#props = $derived(unwrapValue(_props));
         this.init();
@@ -23,6 +24,7 @@ export class Application {
 
         this.#appContext = {} as AppContext;
         setContext("whiteboard-context", this.#appContext);
+        setContext("container-context", this.#containerContext);
 
         $effect(() => {
             (async () => {
@@ -32,6 +34,7 @@ export class Application {
                 this.#app = _app;
 
                 this.#appContext.app = _app;
+                this.#containerContext.container = _app.stage;
             })()
         });
     }
