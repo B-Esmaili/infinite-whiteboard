@@ -1,0 +1,1 @@
+export type MaybeUnwrap<T> = T | (() => T)

@@ -61,5 +61,8 @@
 	},
 	"keywords": [
 		"svelte"
-	]
+	],
+	"dependencies": {
+		"pixi.js": "^8.14.1"		
+	}
 }
