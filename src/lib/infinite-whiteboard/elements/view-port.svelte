@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { Snippet } from 'svelte';
+	import { setContext, type Snippet } from 'svelte';
 	import { Viewport } from 'pixi-viewport';
 
 	export interface ViewPortProps {
@@ -10,12 +10,15 @@
 <script lang="ts">
 	import ContainerElement from '../container-element.svelte';
 	import { getAppContext, getContainerContext } from '../context.svelte.ts';
-	import type { ContainerContext } from '../types.ts';
+	import type { ContainerContext, ViewportContext } from '../types.ts';
 	import { Container } from 'pixi.js';
 
 	const { children }: ViewPortProps = $props();
 
 	let context = $state<ContainerContext>({} as ContainerContext);
+	let viewportContext = $state<ViewportContext>({} as ViewportContext);
+
+	setContext('viewport-context', viewportContext);
 
 	$effect(() => {
 		(async () => {
@@ -29,10 +32,12 @@
 					screenHeight: app.screen.height,
 					worldWidth: 1e6,
 					worldHeight: 1e6,
-					events: app.renderer.events					
+					events: app.renderer.events
 					//interaction: app.renderer.plugins.interaction
 				});
-				
+
+				viewportContext.viewort = viewport;
+
 				app.stage.addChild(viewport);
 
 				viewport.drag().pinch().wheel({ smooth: 4 }).decelerate();

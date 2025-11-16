@@ -3,7 +3,6 @@
 	import { getContainerContext } from '../context.svelte.ts';
 
 	$effect(() => {
-		debugger
 		let context = getContainerContext();
 		const g = new Graphics();
 
@@ -15,7 +14,7 @@
 			color: 0xf59854,
 			alpha: 0.5
 		});
-		g.roundRect(100, 100, 200, 200);
+		g.roundRect(0, 100, 200, 200);
 		g.fill();
 		g.stroke();
 		if (context && context.container) {

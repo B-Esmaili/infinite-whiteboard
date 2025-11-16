@@ -1,5 +1,5 @@
 import { getContext, setContext } from "svelte";
-import type { AppContext, ContainerContext } from "./types.ts";
+import type { AppContext, ContainerContext, ViewportContext } from "./types.ts";
 
 
 export function getAppContext(): AppContext | null {
@@ -14,4 +14,9 @@ export function getContainerContext(): ContainerContext | null {
 
 export function setContainerContext(context: ContainerContext) {
     setContext("container-context", context);
+}
+
+export function getViewPortContext() {
+    let context = getContext("viewport-context") as ViewportContext;
+    return context;
 }

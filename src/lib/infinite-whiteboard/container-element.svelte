@@ -14,7 +14,7 @@
 
 	setContainerContext(context);
 </script>
+
 {#if context.container && children}
-{$inspect(children)}
 	{@render children()}
 {/if}

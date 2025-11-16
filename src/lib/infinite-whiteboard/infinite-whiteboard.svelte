@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Application } from './Application.svelte.ts';
+	import Grid from './elements/grid.svelte';
 	import ViewPort from './elements/view-port.svelte';
 	const { children } = $props();
 
@@ -15,7 +16,9 @@
 
 {#if app.ready}
 	<ViewPort>
-		{@render children()}
+		<Grid>
+			{@render children()}
+		</Grid>
 	</ViewPort>
 {/if}
 
