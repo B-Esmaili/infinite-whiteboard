@@ -10,7 +10,7 @@
 	let worldPoseInstant = $state({ x: 0, y: 0 });
 	let scaleInstant = $state({ x: 1, y: 1 });
 	const worldPos = new Throttled(() => worldPoseInstant, 500);
-	const scale = new Debounced(() => scaleInstant, 50);
+	const scale = new Throttled(() => scaleInstant, 500);
 
 	let GRID_SIZE = 50;
 
@@ -48,9 +48,14 @@
 		const gridRemSpaceY = worldLeftTop.y % GRID_SIZE;
 
 		const startX = worldLeftTop.x - gridRemSpaceX;
+		const endX = worldRightTop.x;
 		const startY = worldLeftTop.y - gridRemSpaceY;
+		const endY = worldRightBottom.y;
 
-		for (let i = startX; i < worldRightTop.x; i += GRID_SIZE) {
+		let lastX = 0;
+
+		for (let i = startX; i < endX; i += GRID_SIZE) {
+			lastX = i;
 			const key = `V-${i}`;
 
 			const existingLine = grids.get(key);
@@ -82,7 +87,40 @@
 			}
 		}
 
-		for (let i = startY; i < worldRightBottom.y; i += GRID_SIZE) {
+		//Cleanup out of viewport vertical lines
+
+		let curX = lastX;
+
+		while (true) {
+			curX += GRID_SIZE;
+			const key = `V-${curX}`;
+			const exists = grids.has(key);
+			if (!exists) {
+				break;
+			} else {
+				layer.removeChild(grids.get(key)!);
+				grids.delete(key);
+			}
+		}
+
+		curX = startX;
+
+		while (true) {
+			curX -= GRID_SIZE;
+			const key = `V-${curX}`;
+			const exists = grids.has(key);
+			if (!exists) {
+				break;
+			} else {
+				layer.removeChild(grids.get(key)!);
+				grids.delete(key);
+			}
+		}
+
+		let lastY = 0;
+
+		for (let i = startY; i < endY; i += GRID_SIZE) {
+			lastY = i;
 			const key = `H-${i}`;
 
 			const existingLine = grids.get(key);
@@ -111,6 +149,36 @@
 			if (!existingLine) {
 				grids.set(key, Line);
 				layer.addChild(Line);
+			}
+		}
+
+		//Cleanup out of viewport horizontal lines
+
+		let curY = lastY;
+
+		while (true) {
+			curY += GRID_SIZE;
+			const key = `H-${curY}`;
+			const exists = grids.has(key);
+			if (!exists) {
+				break;
+			} else {
+				layer.removeChild(grids.get(key)!);
+				grids.delete(key);
+			}
+		}
+
+		curY = startY;
+
+		while (true) {
+			curY -= GRID_SIZE;
+			const key = `H-${curY}`;
+			const exists = grids.has(key);
+			if (!exists) {
+				break;
+			} else {
+				layer.removeChild(grids.get(key)!);
+				grids.delete(key);
 			}
 		}
 	}
