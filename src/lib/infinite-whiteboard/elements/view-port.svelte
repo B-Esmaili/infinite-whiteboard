@@ -23,7 +23,8 @@
 	setContext('viewport-context', viewportContext);
 
 	grid = new Grid({
-		size: 50
+		size: 50,
+		lineColor : "#444"
 	});
 
 	$effect(() => {

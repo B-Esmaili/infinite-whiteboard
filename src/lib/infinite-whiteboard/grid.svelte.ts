@@ -1,17 +1,18 @@
-import { Container, Graphics, Point } from "pixi.js";
+import { Container, Graphics, Point, type ColorSource } from "pixi.js";
 import { extract, Throttled, watch, type MaybeGetter } from "runed";
 import { getAppContext, getContainerContext, getViewPortContext } from "./context.svelte";
 import type { MovedEvent } from "pixi-viewport/dist/types";
 
 export interface GridOptions {
     size: number;
+    lineColor? : ColorSource;
 }
 
 export class Grid {
     #worldPoseInstant = $state({ x: 0, y: 0 });
     #scaleInstant = $state({ x: 1, y: 1 });
-    #worldPos = new Throttled(() => this.#worldPoseInstant, 500);
-    #scale = new Throttled(() => this.#scaleInstant, 500);
+    #worldPos = new Throttled(() => this.#worldPoseInstant, 200);
+    #scale = new Throttled(() => this.#scaleInstant, 200);
     #options: GridOptions;
     #grids = new Map<string, Graphics>();
     #layer = new Container();
@@ -83,6 +84,8 @@ export class Grid {
         let containerContext = getContainerContext();
         let appContext = getAppContext();
 
+        const lineColor = this.#options.lineColor ?? "#222";
+
         if (!viewportContext?.viewort || !containerContext?.container || !appContext?.app) {
             return;
         }
@@ -126,7 +129,7 @@ export class Grid {
             const Line = existingLine ?? new Graphics();
 
             Line.stroke({
-                color: '#111',
+                color: lineColor,
                 width: 1
             });
 
@@ -191,7 +194,7 @@ export class Grid {
             const Line = existingLine ?? new Graphics();
 
             Line.stroke({
-                color: '#111',
+                color: lineColor,
                 width: 1
             });
 
