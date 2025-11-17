@@ -4,6 +4,7 @@
 
 	export interface ViewPortProps {
 		children?: Snippet;
+		grid?: Grid;
 	}
 </script>
 
@@ -12,13 +13,18 @@
 	import { getAppContext, getContainerContext } from '../context.svelte.ts';
 	import type { ContainerContext, ViewportContext } from '../types.ts';
 	import { Container } from 'pixi.js';
+	import { Grid } from '../grid.svelte.ts';
 
-	const { children }: ViewPortProps = $props();
+	let { children, grid = $bindable() }: ViewPortProps = $props();
 
 	let context = $state<ContainerContext>({} as ContainerContext);
 	let viewportContext = $state<ViewportContext>({} as ViewportContext);
 
 	setContext('viewport-context', viewportContext);
+
+	grid = new Grid({
+		size: 50
+	});
 
 	$effect(() => {
 		(async () => {

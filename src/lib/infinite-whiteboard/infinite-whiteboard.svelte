@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Application } from './Application.svelte.ts';
-	import Grid from './elements/grid.svelte';
 	import ViewPort from './elements/view-port.svelte';
+	import type { Grid } from './grid.svelte.ts';
 	const { children } = $props();
 
 	let container: HTMLCanvasElement | null = null;
@@ -10,15 +10,15 @@
 		element: container!,
 		appProps: { backgroundColor: '#000000', resizeTo: container!, antialias: true }
 	}));
+
+	let grid = $state<Grid>();
 </script>
 
 <canvas bind:this={container}></canvas>
 
 {#if app.ready}
-	<ViewPort>
-		<Grid>
-			{@render children()}
-		</Grid>
+	<ViewPort bind:grid>
+		{@render children()}
 	</ViewPort>
 {/if}
 
