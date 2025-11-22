@@ -14,6 +14,7 @@
 	import type { ContainerContext, ViewportContext } from '../types.ts';
 	import { Container } from 'pixi.js';
 	import { Grid } from '../grid.svelte.ts';
+	import { Toolbar } from '../toolbar/toolbar.svelte.ts';
 
 	let { children, grid = $bindable() }: ViewPortProps = $props();
 
@@ -24,8 +25,10 @@
 
 	grid = new Grid({
 		size: 50,
-		lineColor : "#444"
+		lineColor: '#444'
 	});
+
+	const toolbar = new Toolbar();
 
 	$effect(() => {
 		(async () => {
