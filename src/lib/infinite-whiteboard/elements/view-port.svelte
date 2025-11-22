@@ -15,6 +15,7 @@
 	import { Container } from 'pixi.js';
 	import { Grid } from '../grid.svelte.ts';
 	import { Toolbar } from '../toolbar/toolbar.svelte.ts';
+	import { browser } from '$app/environment';
 
 	let { children, grid = $bindable() }: ViewPortProps = $props();
 
@@ -29,15 +30,25 @@
 	});
 
 	const toolbar = new Toolbar();
+	const appContext = getAppContext();
+	let viewport: Viewport;
+
+	function handleResize() {
+		if (appContext) {
+			setTimeout(() => {
+				viewport.resize(appContext.app.renderer.width, appContext.app.renderer.height);
+				grid?.redrawGrid();
+			}, 0);
+		}
+	}
 
 	$effect(() => {
 		(async () => {
 			const containerContext = getContainerContext();
-			const appContext = getAppContext();
 			if (containerContext && appContext) {
 				const app = appContext.app;
 
-				const viewport = new Viewport({
+				viewport = new Viewport({
 					screenWidth: app.screen.width,
 					screenHeight: app.screen.height,
 					worldWidth: 1e6,
@@ -45,6 +56,10 @@
 					events: app.renderer.events
 					//interaction: app.renderer.plugins.interaction
 				});
+
+				if (browser) {
+					window.addEventListener('resize', handleResize);
+				}
 
 				viewportContext.viewort = viewport;
 
@@ -57,6 +72,12 @@
 				context.container = world;
 			}
 		})();
+
+		return () => {
+			if (browser) {
+				window.addEventListener('resize', handleResize);
+			}
+		};
 	});
 </script>
 

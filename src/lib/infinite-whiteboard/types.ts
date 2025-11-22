@@ -3,7 +3,7 @@ import { Application, Container } from "pixi.js";
 
 export interface AppContext {
     app: Application;
-
+    element : HTMLCanvasElement;
 }
 
 export interface ContainerContext {

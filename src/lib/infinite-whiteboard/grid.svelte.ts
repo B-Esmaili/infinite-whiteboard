@@ -2,10 +2,12 @@ import { Container, Graphics, Point, type ColorSource } from "pixi.js";
 import { extract, Throttled, watch, type MaybeGetter } from "runed";
 import { getAppContext, getContainerContext, getViewPortContext } from "./context.svelte";
 import type { MovedEvent } from "pixi-viewport/dist/types";
+import { browser } from "$app/environment";
+import type { AppContext, ContainerContext, ViewportContext } from "./types";
 
 export interface GridOptions {
     size: number;
-    lineColor? : ColorSource;
+    lineColor?: ColorSource;
 }
 
 export class Grid {
@@ -16,20 +18,35 @@ export class Grid {
     #options: GridOptions;
     #grids = new Map<string, Graphics>();
     #layer = new Container();
+    #viewportContext : ViewportContext;
+    #containerContext : ContainerContext;
+    #appContext : AppContext;
 
     constructor(_options: MaybeGetter<GridOptions>) {
         this.#options = extract(_options);
+        const _this = this;
 
         watch(() => this.#worldPos.current, this.redrawGrid.bind(this));
         watch(() => this.#scale.current, this.redrawGrid.bind(this));
 
-        let viewportContext = getViewPortContext();
+
+        function handleResize(){
+            _this.redrawGrid.bind(_this)();
+        }
+
+        if (browser) {
+            window.addEventListener("resize", handleResize);
+        }
+
+        this.#viewportContext = getViewPortContext();
+        this.#containerContext = getContainerContext()!;
+        this.#appContext = getAppContext()!;
 
         $effect(() => {
 
             this.redrawGrid.bind(this)();
 
-            if (!viewportContext?.viewort) {
+            if (!this.#viewportContext?.viewort) {
                 return;
             }
 
@@ -42,12 +59,12 @@ export class Grid {
                 };
             }
 
-            if (viewportContext) {
-                viewportContext.viewort.addChildAt(self.#layer, 0);
+            if (this.#viewportContext) {
+                this.#viewportContext.viewort.addChildAt(self.#layer, 0);
 
-                viewportContext.viewort.on('move', () => console.log('move'));
-                viewportContext.viewort.on('moved', moveHandler);
-                viewportContext.viewort.on('zoomed', (e) => {
+                this.#viewportContext.viewort.on('move', () => console.log('move'));
+                this.#viewportContext.viewort.on('moved', moveHandler);
+                this.#viewportContext.viewort.on('zoomed', (e) => {
                     self.#scaleInstant = {
                         x: e.viewport.scale.x,
                         y: e.viewport.scale.y
@@ -67,38 +84,38 @@ export class Grid {
             });
             g.roundRect(100, 100, 200, 200);
             g.fill();
-            g.stroke();       
+            g.stroke();
 
             return () => {
-                if (viewportContext) {
-                    viewportContext.viewort.removeChild(self.#layer);
-                    viewportContext.viewort.off('moved', moveHandler);
+                if (this.#viewportContext) {
+                    this.#viewportContext.viewort.removeChild(self.#layer);
+                    this.#viewportContext.viewort.off('moved', moveHandler);
+                    if (browser) {
+                        window.removeEventListener("resize", handleResize);
+                    }
                 }
             };
         });
     }
 
     redrawGrid() {
-        const GRID_SIZE = this.#options.size;
-        let viewportContext = getViewPortContext();
-        let containerContext = getContainerContext();
-        let appContext = getAppContext();
+        const GRID_SIZE = this.#options.size;        
 
         const lineColor = this.#options.lineColor ?? "#222";
 
-        if (!viewportContext?.viewort || !containerContext?.container || !appContext?.app) {
+        if (!this.#viewportContext?.viewort || !this.#containerContext?.container || !this.#appContext?.app) {
             return;
         }
 
-        const worldLeftTop = viewportContext.viewort.toWorld(new Point(0, 0));
-        const worldLeftBottom = viewportContext.viewort.toWorld(
-            new Point(0, viewportContext.viewort.screenHeight)
+        const worldLeftTop = this.#viewportContext.viewort.toWorld(new Point(0, 0));
+        const worldLeftBottom = this.#viewportContext.viewort.toWorld(
+            new Point(0, this.#viewportContext.viewort.screenHeight)
         );
-        const worldRightTop = viewportContext.viewort.toWorld(
-            new Point(viewportContext.viewort.screenWidth, 0)
+        const worldRightTop = this.#viewportContext.viewort.toWorld(
+            new Point(this.#viewportContext.viewort.screenWidth, 0)
         );
-        const worldRightBottom = viewportContext.viewort.toWorld(
-            new Point(0, viewportContext.viewort.screenHeight)
+        const worldRightBottom = this.#viewportContext.viewort.toWorld(
+            new Point(0, this.#viewportContext.viewort.screenHeight)
         );
 
         const gridRemSpaceX = worldLeftTop.x % GRID_SIZE;

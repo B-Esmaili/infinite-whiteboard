@@ -9,7 +9,7 @@
 
 	let app = new Application(() => ({
 		element: container!,
-		appProps: { backgroundColor: '#000000', resizeTo: container!, antialias: true }
+		appProps: { backgroundColor: '#000000', antialias: true }
 	}));
 
 	let grid = $state<Grid>();

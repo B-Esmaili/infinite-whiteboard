@@ -21,7 +21,6 @@ export class Application {
     }
 
     init() {
-
         this.#appContext = {} as AppContext;
         setContext("whiteboard-context", this.#appContext);
         setContext("container-context", this.#containerContext);
@@ -30,10 +29,12 @@ export class Application {
             (async () => {
                 const _app = new PixiApp();
                 const element = this.#props.element;
-                await _app.init({ ... this.#props.appProps, canvas: element });
+                await _app.init({ ... this.#props.appProps, canvas: element, resizeTo: element! });
+                
                 this.#app = _app;
 
                 this.#appContext.app = _app;
+                this.#appContext.element = element;
                 this.#containerContext.container = _app.stage;
             })()
         });
