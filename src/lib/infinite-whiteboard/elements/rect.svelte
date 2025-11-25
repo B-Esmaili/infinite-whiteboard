@@ -2,8 +2,10 @@
 	import { Graphics } from 'pixi.js';
 	import { getContainerContext } from '../context.svelte.ts';
 
+	let context = getContainerContext();
+
 	$effect(() => {
-		let context = getContainerContext();
+		console.log();
 		const g = new Graphics();
 
 		g.stroke(0xff0000);

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Application } from './Application.svelte.ts';
+	import { getAppContext } from './context.svelte.ts';
 	import ViewPort from './elements/view-port.svelte';
 	import type { Grid } from './grid.svelte.ts';
 	import ToolbarView from './toolbar/toolbar-view.svelte';
@@ -12,7 +13,12 @@
 		appProps: { backgroundColor: '#000000', antialias: true }
 	}));
 
+	const appContext = getAppContext();
+
 	let grid = $state<Grid>();
+
+	let enablePan = $derived(appContext?.activeTool?.manifest.name === "pan");
+
 </script>
 
 <div class="canvas">
@@ -20,7 +26,7 @@
 </div>
 
 {#if app.ready}
-	<ViewPort bind:grid>		 
+	<ViewPort bind:grid {enablePan}>
 		{@render children()}
 	</ViewPort>
 {/if}

@@ -6,8 +6,8 @@ import { Hand } from "@lucide/svelte";
 const PanToolboxItem: ToolboxItem = {
    editorComponent: PanEditor,
    manifest: {
-      name: "pen",
-      displayName: "Pen",
+      name: "pan",
+      displayName: "Pan",
       icon: Hand
    },
    handler: handle

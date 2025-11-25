@@ -5,6 +5,7 @@
 	export interface ViewPortProps {
 		children?: Snippet;
 		grid?: Grid;
+		enablePan?: boolean;
 	}
 </script>
 
@@ -15,8 +16,9 @@
 	import { Container } from 'pixi.js';
 	import { Grid } from '../grid.svelte.ts';
 	import { browser } from '$app/environment';
+	import { watch } from 'runed';
 
-	let { children, grid = $bindable() }: ViewPortProps = $props();
+	let { children, grid = $bindable(), enablePan }: ViewPortProps = $props();
 
 	let context = $state<ContainerContext>({} as ContainerContext);
 	let viewportContext = $state<ViewportContext>({} as ViewportContext);
@@ -27,7 +29,7 @@
 		size: 50,
 		lineColor: '#444'
 	});
-	
+
 	const appContext = getAppContext();
 
 	let viewport: Viewport;
@@ -71,6 +73,17 @@
 				context.container = world;
 			}
 		})();
+
+		watch(
+			() => enablePan,
+			(enablePan) => {
+				if (!enablePan) {
+					viewport.plugins.pause('drag');
+				} else {
+					viewport.plugins.resume('drag');
+				}
+			}
+		);
 
 		return () => {
 			if (browser) {

@@ -13,6 +13,7 @@
 	let { context, children }: ContainerElementProps = $props();
 
 	setContainerContext(context);
+	
 </script>
 
 {#if context.container && children}
