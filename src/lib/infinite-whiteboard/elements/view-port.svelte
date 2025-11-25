@@ -14,7 +14,6 @@
 	import type { ContainerContext, ViewportContext } from '../types.ts';
 	import { Container } from 'pixi.js';
 	import { Grid } from '../grid.svelte.ts';
-	import { Toolbar } from '../toolbar/toolbar.svelte.ts';
 	import { browser } from '$app/environment';
 
 	let { children, grid = $bindable() }: ViewPortProps = $props();
@@ -28,9 +27,9 @@
 		size: 50,
 		lineColor: '#444'
 	});
-
-	const toolbar = new Toolbar();
+	
 	const appContext = getAppContext();
+
 	let viewport: Viewport;
 
 	function handleResize() {

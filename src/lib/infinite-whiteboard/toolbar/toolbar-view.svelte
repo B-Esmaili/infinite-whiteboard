@@ -8,7 +8,7 @@
 	import { SvelteMap } from 'svelte/reactivity';
 
 	let toolbarContext = getToolbarContext();
-	let activeItem = $derived(toolbarContext?.activeItem?.name ?? 'selection');
+	let activeItem = $derived(toolbarContext?.activeItem?.name);
 	let items = $derived(toolbarContext?.items);
 	let flatItems = $derived(getFlatItems(items));
 
@@ -49,7 +49,7 @@
 	};
 
 	let containerState = new SvelteMap<string, string>();
-	containerState.set('', 'selection');
+	containerState.set('', activeItem);
 </script>
 
 {#snippet subItem(parentName: string, item: ToolbarItem)}

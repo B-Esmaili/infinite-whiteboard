@@ -20,8 +20,7 @@
 </div>
 
 {#if app.ready}
-	<ViewPort bind:grid>
-		<ToolbarView />
+	<ViewPort bind:grid>		 
 		{@render children()}
 	</ViewPort>
 {/if}

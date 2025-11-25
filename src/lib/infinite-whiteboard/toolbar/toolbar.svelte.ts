@@ -1,5 +1,6 @@
-import { setContext, type Component } from "svelte";
-import { Square, Hand, Diamond, MousePointer2 } from '@lucide/svelte';
+import { mount, setContext, type Component } from "svelte";
+import ToolbarView from "./toolbar-view.svelte";
+import { extract, watch, type MaybeGetter } from "runed";
 
 export interface ToolbarItem {
     name: string;
@@ -14,65 +15,36 @@ export interface ToolbarContext {
     setActiveItem: (item: ToolbarItem) => void;
 }
 
-const defaultItems: ToolbarItem[] = [{
-    name: "selection",
-    displayName: "Selection",
-    icon: MousePointer2
-},
-{
-    name: "pan",
-    displayName: "Pan",
-    icon: Hand
-},
-{
-    name: "rect",
-    displayName: "Rect",
-    icon: Square
-}, {
-    name: "diamond",
-    displayName: "Diamond",
-    icon: Diamond
-},
-{
-    name: "diamond2",
-    displayName: "Diamond",
-    icon: Diamond,
-    items: [
-        {
-            name: "pan2",
-            displayName: "Pan 2",
-            icon: Hand
-        },
-        {
-            name: "rect2",
-            displayName: "Rect 2",
-            icon: Square,
-            items: [
-                {
-                    name: "pan3",
-                    displayName: "Pan 3",
-                    icon: Hand
-                },
-                {
-                    name: "rect3",
-                    displayName: "Rect 3",
-                    icon: Square
-                }
-            ]
-        }
-    ]
-}];
+export interface ToolbarProps{
+    items: ToolbarItem[];
+    onChange? : (newItem : ToolbarItem | undefined)=>void;
+}
 
 export class Toolbar {
-    activeItem = $state<ToolbarItem>(defaultItems[0]);
-    context = $state<ToolbarContext>({ items: defaultItems } as ToolbarContext);
-    items = $state<ToolbarItem[]>(defaultItems);
+    activeItem = $state<ToolbarItem>();
+    context = $state<ToolbarContext>({} as ToolbarContext);
+    items = $state<ToolbarItem[]>();
+    #options = $state<ToolbarProps>();
 
-    constructor() {
-        this.context.activeItem = this.activeItem;
+    constructor(options:MaybeGetter<ToolbarProps>) {  
+        this.#options = extract(options);
+        const _options = this.#options;
+        this.items = _options.items;
+        this.context.activeItem = this.activeItem!;
+        this.context.items = this.items;
         this.context.setActiveItem = this.setActiveItem.bind(this);
 
         setContext("toolbar-context", this.context);
+
+        $effect(() => {
+            mount(ToolbarView, {
+                target: document.body
+            });
+        });
+
+        watch(()=> this.activeItem , (newItem)=>{
+            this.#options?.onChange?.(newItem);
+        })
     }
 
     setActiveItem(item: ToolbarItem) {
