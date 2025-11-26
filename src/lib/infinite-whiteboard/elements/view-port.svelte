@@ -6,19 +6,20 @@
 		children?: Snippet;
 		grid?: Grid;
 		enablePan?: boolean;
+		toolboxItems : ToolboxItem[];
 	}
 </script>
 
 <script lang="ts">
 	import ContainerElement from '../container-element.svelte';
 	import { getAppContext, getContainerContext } from '../context.svelte.ts';
-	import type { ContainerContext, ViewportContext } from '../types.ts';
+	import type { ContainerContext, ToolboxItem, ViewportContext } from '../types.ts';
 	import { Container } from 'pixi.js';
 	import { Grid } from '../grid.svelte.ts';
 	import { browser } from '$app/environment';
 	import { watch } from 'runed';
 
-	let { children, grid = $bindable(), enablePan }: ViewPortProps = $props();
+	let { children, grid = $bindable(), enablePan , toolboxItems }: ViewPortProps = $props();
 
 	let context = $state<ContainerContext>({} as ContainerContext);
 	let viewportContext = $state<ViewportContext>({} as ViewportContext);
@@ -43,10 +44,13 @@
 		}
 	}
 
+	const containerContext = getContainerContext();
+
+	toolboxItems.forEach(e => e.handler());
+
 	$effect(() => {
 		(async () => {
-			const containerContext = getContainerContext();
-			if (containerContext && appContext) {
+			if (containerContext?.container && appContext?.app) {
 				const app = appContext.app;
 
 				viewport = new Viewport({
@@ -77,6 +81,10 @@
 		watch(
 			() => enablePan,
 			(enablePan) => {
+				if (!viewport) {
+					return;
+				}
+				
 				if (!enablePan) {
 					viewport.plugins.pause('drag');
 				} else {
@@ -87,7 +95,7 @@
 
 		return () => {
 			if (browser) {
-				window.addEventListener('resize', handleResize);
+				window.removeEventListener('resize', handleResize);
 			}
 		};
 	});

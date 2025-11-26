@@ -1,5 +1,5 @@
 import type { ToolboxItem } from "@lib/infinite-whiteboard/types";
-import RectEditor from "./react-editor.svelte"
+import RectEditor from "./rect-editor.svelte"
 import { handle } from "./handler.svelte";
 import { Square } from "@lucide/svelte";
 

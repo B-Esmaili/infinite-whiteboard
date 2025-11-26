@@ -5,7 +5,6 @@
 	let context = getContainerContext();
 
 	$effect(() => {
-		console.log();
 		const g = new Graphics();
 
 		g.stroke(0xff0000);

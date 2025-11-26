@@ -14,11 +14,6 @@
 	}));
 
 	const appContext = getAppContext();
-
-	let grid = $state<Grid>();
-
-	let enablePan = $derived(appContext?.activeTool?.manifest.name === "pan");
-
 </script>
 
 <div class="canvas">
@@ -26,9 +21,7 @@
 </div>
 
 {#if app.ready}
-	<ViewPort bind:grid {enablePan}>
-		{@render children()}
-	</ViewPort>
+	{@render children()}
 {/if}
 
 <style>

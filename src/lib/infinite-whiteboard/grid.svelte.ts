@@ -62,7 +62,6 @@ export class Grid {
             if (this.#viewportContext) {
                 this.#viewportContext.viewort.addChildAt(self.#layer, 0);
 
-                this.#viewportContext.viewort.on('move', () => console.log('move'));
                 this.#viewportContext.viewort.on('moved', moveHandler);
                 this.#viewportContext.viewort.on('zoomed', (e) => {
                     self.#scaleInstant = {
