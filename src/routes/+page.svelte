@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import Rect from '$lib/infinite-whiteboard/elements/rect.svelte';
-	import '../app.css'
+	import '../app.css';
 
 	let InfiniteWhiteboard = $state<any>(null);
 
@@ -16,13 +16,11 @@
 </script>
 
 {#if InfiniteWhiteboard}
-	<InfiniteWhiteboard>
-		<Rect/>
-	</InfiniteWhiteboard>
+	<InfiniteWhiteboard></InfiniteWhiteboard>
 {/if}
 
 <style>
-	:global(body){
+	:global(body) {
 		padding: 0;
 		margin: 0;
 	}

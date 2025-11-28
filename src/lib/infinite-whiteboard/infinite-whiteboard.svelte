@@ -20,7 +20,7 @@
 	<canvas bind:this={container}> </canvas>
 </div>
 
-{#if app.ready}
+{#if app.ready && children}
 	{@render children()}
 {/if}
 
