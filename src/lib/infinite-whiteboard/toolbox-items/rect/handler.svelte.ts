@@ -25,7 +25,11 @@ export function handle() {
 
         if (newRect) {
             newRect.clear();
-            newRect.rect(x, y, w, h).stroke({ width: 2, color: 0xff0000, alpha: 1, pixelLine: false });
+            newRect            
+            .roundRect(x, y, w, h,5).setFillStyle({
+                color : 0x025469,
+                alpha : 0.6
+            }).fill().stroke({ width: 2, color: 0xff0000, alpha: 1, pixelLine: false });
         }
     }
 
@@ -45,7 +49,7 @@ export function handle() {
 
                     startCoords.x = pos.x;
                     startCoords.y = pos.y;
-                    newRect.clear();
+                    newRect.clear();                    
                 }
             });
 
