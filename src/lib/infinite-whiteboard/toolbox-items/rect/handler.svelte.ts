@@ -1,5 +1,21 @@
 import { getAppContext, getViewPortContext } from "@lib/infinite-whiteboard/context.svelte"
 import { Graphics, Point, Rectangle } from "pixi.js";
+import RectWidget from "@lib/infinite-whiteboard/widgets/rect-widget.svelte";
+import RectEditor from "@lib/infinite-whiteboard/editors/rect-editor.svelte";
+
+
+export function drawRect(graphics: Graphics, x1: number, y1: number, x2: number, y2: number) {
+    const x = Math.min(x1, x2);
+    const y = Math.min(y1, y2);
+    const w = Math.abs(x2 - x1);
+    const h = Math.abs(y2 - y1);
+
+    graphics
+        .roundRect(x, y, w, h, 5).setFillStyle({
+            color: 0x025469,
+            alpha: 0.6
+        }).fill().setStrokeStyle({ width: 2, color: 0xff0000, alpha: 1, pixelLine: false }).stroke();
+}
 
 export function handle() {
     let appContext = getAppContext();
@@ -9,31 +25,13 @@ export function handle() {
     let newRect: Graphics | null;
 
     let viewport = $derived.by(() => getViewPortContext()?.viewort);
+    let x1: number, y1: number;
 
-    function getWorldPos(e) {
-        // Option A: preferred and simple
+    function getWorldPos(e: any) {
         return e.data.getLocalPosition(viewport);
-        // Option B: equivalent
-        // return viewport.toWorld(e.data.global);
     }
 
-    function drawRect(x1: number, y1: number, x2: number, y2: number) {
-        const x = Math.min(x1, x2);
-        const y = Math.min(y1, y2);
-        const w = Math.abs(x2 - x1);
-        const h = Math.abs(y2 - y1);
-
-        if (newRect) {
-            newRect.clear();
-            newRect            
-            .roundRect(x, y, w, h,5).setFillStyle({
-                color : 0x025469,
-                alpha : 0.6
-            }).fill().stroke({ width: 2, color: 0xff0000, alpha: 1, pixelLine: false });
-        }
-    }
-
-    function worldPosFromEvent(e) {
+    function worldPosFromEvent(e: any) {
         return e.data.getLocalPosition(viewport);
     }
 
@@ -49,17 +47,30 @@ export function handle() {
 
                     startCoords.x = pos.x;
                     startCoords.y = pos.y;
-                    newRect.clear();                    
+                    newRect.clear();
                 }
             });
 
-            viewport.on("pointerup", () => {
+            viewport.on("pointerup", (e) => {
                 if (tool?.manifest.name === "rect") {
                     isDown = false;
                     if (newRect) {
-                        const newRect2 = newRect.clone(true);
-                        viewport.addChild(newRect2);
                         viewport.removeChild(newRect);
+                        const pos = getWorldPos(e);
+                        if (appContext) {
+                            appContext.addWidget({
+                                widgetModel: {
+                                    x1: startCoords.x,
+                                    y1: startCoords.y,
+                                    x2: pos.x,
+                                    y2: pos.y
+                                },
+                                mounted: false,
+                                name: "rect",
+                                editor: RectEditor,
+                                widget: RectWidget
+                            });
+                        }
                     }
                 }
             });
@@ -67,22 +78,17 @@ export function handle() {
 
             viewport.on("pointermove", (e) => {
                 if (tool?.manifest.name === "rect") {
+                    
                     if (!isDown || !startCoords) {
                         return;
                     }
+
                     const p = worldPosFromEvent(e);
 
-                    drawRect(startCoords.x, startCoords.y, p.x, p.y);
-
-                    // if (newRect) {
-                    //     newRect.rect(, startCoords.y, e.)
-                    //         .fill(0xff0000)
-                    //         .circle(200, 200, 50)
-                    //         .stroke(0x00ff00)
-                    //         .lineStyle(5)
-                    //         .moveTo(300, 300)
-                    //         .lineTo(400, 400);
-                    // }
+                    if (newRect) {
+                        newRect.clear();
+                        drawRect(newRect, startCoords.x, startCoords.y, p.x, p.y);
+                    }
                 }
             });
 

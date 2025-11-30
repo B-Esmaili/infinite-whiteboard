@@ -6,7 +6,8 @@
 		children?: Snippet;
 		grid?: Grid;
 		enablePan?: boolean;
-		toolboxItems : ToolboxItem[];
+		toolboxItems: ToolboxItem[];
+		onReady?: (ctx: ViewportContext) => void;
 	}
 </script>
 
@@ -19,7 +20,7 @@
 	import { browser } from '$app/environment';
 	import { watch } from 'runed';
 
-	let { children, grid = $bindable(), enablePan , toolboxItems }: ViewPortProps = $props();
+	let { children, grid = $bindable(), enablePan, toolboxItems, onReady }: ViewPortProps = $props();
 
 	let context = $state<ContainerContext>({} as ContainerContext);
 	let viewportContext = $state<ViewportContext>({} as ViewportContext);
@@ -46,7 +47,7 @@
 
 	const containerContext = getContainerContext();
 
-	toolboxItems.forEach(e => e.handler());
+	toolboxItems.forEach((e) => e.handler());
 
 	$effect(() => {
 		(async () => {
@@ -59,7 +60,6 @@
 					worldWidth: 1e6,
 					worldHeight: 1e6,
 					events: app.renderer.events
-					//interaction: app.renderer.plugins.interaction
 				});
 
 				if (browser) {
@@ -75,6 +75,8 @@
 				const world = new Container();
 				viewport.addChild(world);
 				context.container = world;
+
+				onReady?.(viewportContext);
 			}
 		})();
 
@@ -84,7 +86,7 @@
 				if (!viewport) {
 					return;
 				}
-				
+
 				if (!enablePan) {
 					viewport.plugins.pause('drag');
 				} else {

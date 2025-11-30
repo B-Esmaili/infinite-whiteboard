@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import Rect from '$lib/infinite-whiteboard/elements/rect.svelte';
 	import '../app.css';
 
 	let InfiniteWhiteboard = $state<any>(null);
