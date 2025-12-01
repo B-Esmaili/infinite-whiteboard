@@ -28,8 +28,7 @@ interface ToolboxItemManifest {
 }
 
 //export interface ToolboxItem<TEditorProps extends Record<string, unknown> = {}> {
-export interface ToolboxItem {
-    editorComponent: Component<any>;
+export interface ToolboxItem {    
     handler: ToolboxItemHandler;
     manifest: ToolboxItemManifest;
 }

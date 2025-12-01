@@ -1,10 +1,8 @@
 import type { ToolboxItem } from "@lib/infinite-whiteboard/types";
-import SelectionEditor from "./selection-editor.svelte"
 import { handle } from "./handler.svelte";
 import { MousePointer2 } from "@lucide/svelte";
 
-const SelectionToolboxItem: ToolboxItem = {
-   editorComponent: SelectionEditor,
+const SelectionToolboxItem: ToolboxItem = {   
    manifest: {
       name: "selection",
       displayName: "Selection",

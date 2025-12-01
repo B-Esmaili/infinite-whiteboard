@@ -9,7 +9,6 @@ import ToolboxItems from "./toolbox-items";
 import type { Grid } from "./grid.svelte.ts";
 import ViewPort from "./widgets/view-port.svelte";
 import { watch } from "runed";
-import EditorPanel from "./editors/editor-panel.svelte";
 import { SvelteMap } from "svelte/reactivity";
 
 export interface ApplicaionProps {

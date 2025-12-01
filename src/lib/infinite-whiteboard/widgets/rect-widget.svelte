@@ -10,11 +10,9 @@
 <script lang="ts">
 	import { Graphics } from 'pixi.js';
 	import { getViewPortContext } from '../context.svelte.ts';
-	import { drawRect } from '../toolbox-items/rect/handler.svelte.ts';
+	import { drawRect } from '../helpers/drawing-helper.ts';
 
 	const props: RectWidgetModel = $props();
-
-	$inspect(props);
 
 	const { x1, y1, x2, y2 } = props;
 
