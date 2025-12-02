@@ -15,7 +15,7 @@ export class AbstractCommand implements ICommand {
 
     }
     protected ensureContext() : Viewport {
-        const app = this.context?.viewort;
+        const app = this.context?.viewport;
         if (!app) {
             throw new Error("Context is not available");
         }

@@ -66,8 +66,7 @@
 					window.addEventListener('resize', handleResize);
 				}
 
-				viewportContext.viewort = viewport;
-
+				viewportContext.viewport = viewport;
 				app.stage.addChild(viewport);
 
 				viewport.drag().pinch().wheel({ smooth: 4 }).decelerate();

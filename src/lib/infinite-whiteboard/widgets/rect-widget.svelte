@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	export interface RectWidgetModel {
+	export interface RectViewModel {
 		x1: number;
 		y1: number;
 		x2: number;
@@ -8,30 +8,34 @@
 </script>
 
 <script lang="ts">
-	import { Graphics } from 'pixi.js';
-	import { getViewPortContext } from '../context.svelte.ts';
+	import { getAppContext, getViewPortContext } from '../context.svelte.ts';
 	import { drawRect } from '../helpers/drawing-helper.ts';
+	import type { WhiteboardElement } from '../types.ts';
 
-	const props: RectWidgetModel = $props();
+	const el: WhiteboardElement<RectViewModel> = $props();
 
-	const { x1, y1, x2, y2 } = props;
+	const {
+		viewModel: { x1, y1, x2, y2 },
+		register,
+		unRegister
+	} = el;
 
 	const viewportContext = getViewPortContext();
-	let graphics: Graphics;
+	const appContext = getAppContext();
 
 	$effect(() => {
+		if (viewportContext && appContext) {
+			drawRect(el.graphics, x1, y1, x2, y2);
 
-		if (viewportContext) {
-			graphics = new Graphics();
-			drawRect(graphics, x1, y1, x2, y2);
-			viewportContext.viewort.addChild(graphics);
+			register(el, {
+				selectable: true
+			});
 		}
 
 		return () => {
-			if (viewportContext){
-				viewportContext.viewort.removeChild(graphics);
+			if (el) {
+				unRegister(el);
 			}
 		};
 	});
-
 </script>

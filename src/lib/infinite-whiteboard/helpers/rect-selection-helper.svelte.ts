@@ -1,10 +1,13 @@
 import { Bounds, FederatedPointerEvent, Graphics, Point, Rectangle, type Container, type FillInput, type StrokeInput } from "pixi.js";
 import { extract, type MaybeGetter } from "runed";
 import { drawRect } from "./drawing-helper";
+import { getViewPortContext } from "../context.svelte";
+import type { ViewportContext } from "../types";
 
 export interface RectSelectionOptions {
     enabled: boolean;
-    onSelectionDone?: (rect: Rectangle) => void;
+    onSelectionDone?: (rect: Bounds) => void;
+    onSelectionChange?: (rect: Bounds) => void;
     graphics?: boolean | {
         stroke?: StrokeInput;
         background?: FillInput;
@@ -17,9 +20,10 @@ export class RectSelectionHelper {
     #selectionRect = new Graphics();
     #options: RectSelectionOptions;
     #container: Container | undefined;
+    #viewportContext: ViewportContext;
 
-    private getWorldPos(e: any) {
-        return e.data.getLocalPosition(this.#container);
+    private getWorldPos(e: FederatedPointerEvent) {
+        return e.data.getLocalPosition(this.#container!);
     }
 
     private worldPosFromEvent(e: FederatedPointerEvent) {
@@ -44,14 +48,19 @@ export class RectSelectionHelper {
         if (!this.#options.enabled) {
             return;
         }
+
         this.#isDown = false;
+
         if (this.#selectionRect && this.#container) {
             this.#container.removeChild(this.#selectionRect);
             const pos = this.getWorldPos(e);
 
-            const rect = new Rectangle();
-            rect.copyFromBounds(new Bounds(this.#startCoords.x, this.#startCoords.y, pos.x, pos.y))
-            this.#options.onSelectionDone?.(rect);
+            const minX = Math.min(this.#startCoords.x, pos.x);
+            const minY = Math.min(this.#startCoords.y, pos.y);
+            const maxX = Math.max(this.#startCoords.x, pos.x);
+            const maxY = Math.max(this.#startCoords.y, pos.y);
+
+            this.#options.onSelectionDone?.(new Bounds(minX, minY, maxX, maxY));
         }
     }
 
@@ -61,12 +70,21 @@ export class RectSelectionHelper {
             return;
         }
 
-        const p = this.worldPosFromEvent(e);
         const gr = this.#options.graphics;
 
         if (this.#selectionRect && (gr === undefined || gr)) {
             this.#selectionRect.clear();
-            drawRect(this.#selectionRect, this.#startCoords.x, this.#startCoords.y, p.x, p.y, (gr === undefined || gr === true) ? undefined : {
+
+            const pos = this.getWorldPos(e);
+
+            const minX = Math.min(this.#startCoords.x, pos.x);
+            const minY = Math.min(this.#startCoords.y, pos.y);
+            const maxX = Math.max(this.#startCoords.x, pos.x);
+            const maxY = Math.max(this.#startCoords.y, pos.y);
+
+            this.#options.onSelectionChange?.(new Bounds(minX, minY, maxX, maxY));
+
+            drawRect(this.#selectionRect, minX, minY, maxX, maxY, (gr === undefined || gr === true) ? undefined : {
                 fill: gr.background,
                 stroke: gr.stroke
             });
@@ -76,6 +94,7 @@ export class RectSelectionHelper {
     constructor(container: MaybeGetter<Container> | undefined, options: MaybeGetter<RectSelectionOptions>) {
         this.#options = $derived(extract(options));
         this.#container = $derived(extract(container));
+        this.#viewportContext = getViewPortContext();
         const _this = this;
 
         $effect(() => {
