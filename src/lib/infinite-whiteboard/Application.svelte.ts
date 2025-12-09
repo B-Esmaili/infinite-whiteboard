@@ -3,7 +3,7 @@ import type { MaybeUnwrap } from "$lib/utils/types.ts";
 import { Graphics, type ApplicationOptions, type Bounds } from "pixi.js";
 import { Application as PixiApp } from "pixi.js"
 import type { AppContext, ContainerContext, ToolboxItem, ViewportContext, WhiteboardElement } from "./types.ts";
-import { mount, setContext, tick, unmount } from "svelte";
+import { mount, setContext, tick, unmount, type Component } from "svelte";
 import { Toolbar, type ToolbarItem } from "./toolbar/toolbar.svelte.ts";
 import ToolboxItems from "./toolbox-items";
 import type { Grid } from "./grid.svelte.ts";
@@ -11,6 +11,10 @@ import ViewPort from "./widgets/view-port.svelte";
 import { watch } from "runed";
 import { SvelteMap } from "svelte/reactivity";
 import { Selection } from "./selection.svelte.ts";
+import { UndoRedoCommand } from "./commands/undo-redo-command.ts";
+import { AddElementUndoCommand } from "./commands/add-object-command.ts";
+import { CommandManager } from "./commands/command-history.svelte.ts";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface ApplicaionProps {
     element: HTMLCanvasElement;
@@ -27,6 +31,8 @@ export class Application {
     #ready = false;
     #contexts = new SvelteMap<string, unknown>();
     #selection: Selection | undefined;
+    #commandManager: CommandManager = null as unknown as CommandManager;
+    #viewInstances = new Map<string, any>;
 
     constructor(_props: MaybeUnwrap<ApplicaionProps>) {
         this.#props = $derived(unwrapValue(_props));
@@ -34,7 +40,21 @@ export class Application {
     }
 
     addElement(element: WhiteboardElement) {
+        element.uid = uuidv4();
+        this.addElementInternal(element);
 
+        const _this = this;
+
+        const cmd = new AddElementUndoCommand(() => {
+            _this.removeElementInternal(element.uid);
+        }, () => {
+            _this.addElementInternal(cmd.getElement());
+        }, element);
+
+        this.#commandManager.addCommand(cmd);
+    }
+
+    private addElementInternal(element: WhiteboardElement) {
         this.#elements.push(element);
 
         element.graphics = new Graphics();
@@ -48,33 +68,47 @@ export class Application {
         };
 
         element.unRegister = (el) => {
-            this.#viewportContex.viewport.addChild(el.graphics);
+            this.#viewportContex.viewport.removeChild(el.graphics);
             if (this.#selection?.isElementRegistered(el)) {
                 this.unRegisterSelection(el);
             }
         };
 
-        mount(element.view, {
+        const instance = mount(element.view, {
             target: document.body,
             props: element,
             context: this.#contexts,
         });
+
+        this.#viewInstances.set(element.uid, instance);
     }
 
-    removeElement(uid: string) {
+    private removeElementInternal(uid: string) {
         const elToRemoveIndex = this.#elements.findIndex(e => e.uid === uid);
 
         if (elToRemoveIndex < 0) {
             return;
         }
 
-        const view = this.#elements.at(elToRemoveIndex)?.view;
+        const el = this.#elements.at(elToRemoveIndex)
+        const view = el?.view;
 
         this.#elements.splice(elToRemoveIndex, 1);
 
-        if (view) {
-            unmount(view);
+        if (el?.uid && el) {
+            const viewInstance = this.#viewInstances.get(el.uid);
+
+            if (viewInstance) {
+                this.#viewInstances.delete(el.uid);
+                unmount(viewInstance);
+            }
         }
+
+        return el;
+    }
+
+    removeElement(uid: string) {
+        this.removeElementInternal(uid);
     }
 
     init() {
@@ -134,7 +168,7 @@ export class Application {
             }
         });
 
-        mount(ViewPort, {
+        const viewportView = mount(ViewPort, {
             target: document.body,
             props: viewPortProps
         });
@@ -144,6 +178,8 @@ export class Application {
         });
 
         this.#ready = true;
+
+        this.#commandManager = new CommandManager(this.#viewportContex);
 
         $effect(() => {
             (async () => {
@@ -160,6 +196,10 @@ export class Application {
                 this.#appContext.element = element;
                 this.#containerContext.container = _app.stage;
             })()
+
+            return () => {
+                unmount(viewportView);
+            }
         });
     }
 

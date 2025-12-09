@@ -81,6 +81,7 @@
 		"pixi.js": "^8.14.1",
 		"rbush": "^4.0.1",
 		"runed": "^0.36.0",
-		"sass-embedded": "^1.93.3"
+		"sass-embedded": "^1.93.3",
+		"uuid": "^13.0.0"
 	}
 }

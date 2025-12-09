@@ -1,17 +1,16 @@
-import type { AppContext, ViewportContext } from "../types";
-import { AbstractCommand, type CanvasObject, type ICommand } from "./ICommand"
+import type { ViewportContext, WhiteboardElement } from "../types";
+import { UndoRedoCommand } from "./undo-redo-command";
 
-export class AddObjectCommand extends AbstractCommand {    
-    constructor(obj : CanvasObject,context : ViewportContext) {
-        super(context);
+export class AddElementUndoCommand extends UndoRedoCommand {
+    constructor(undoCmd: () => void, redoCmd: () => void, private el: WhiteboardElement) {
+        super(undoCmd, redoCmd);
     }
 
-    execute () {
-        const viewport = super.ensureContext();
-        viewport.addChild();
+    getElement() {
+        return this.el;
     }
 
-    undo () {
-        super.ensureContext();
+    setElement(el: WhiteboardElement) {
+        this.el = el;
     }
 }
