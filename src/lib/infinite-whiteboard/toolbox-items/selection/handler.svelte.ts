@@ -14,7 +14,7 @@ export function handle() {
     let indicators = new Map<WhiteboardElement, Graphics>();
 
     function updateSelection(bounds: Bounds) {
-        const selectedItems = appContext?.getSelectedElements(bounds);
+        const selectedItems = appContext?.getElementsInRange(bounds);
 
         if (selectedItems) {
             indicators.entries().forEach((item) => {
@@ -24,26 +24,29 @@ export function handle() {
                 }
             });
 
-            selectedItems.forEach(element => {
-                let indg = indicators.get(element);
-                const isNew = indg === undefined;
+            // selectedItems.forEach(element => {
+            //     let indg = indicators.get(element);
+            //     const isNew = indg === undefined;
 
-                const bounds = element.graphics.getBounds();
+            //     const bounds = element.graphics.getBounds();
 
-                const p1 = viewport.toWorld(bounds.minX - 5, bounds.minY - 5);
-                const p2 = viewport.toWorld(bounds.maxX + 5, bounds.maxY + 5);
+            //     const p1 = viewport.toWorld(bounds.minX - 5, bounds.minY - 5);
+            //     const p2 = viewport.toWorld(bounds.maxX + 5, bounds.maxY + 5);
 
-                if (!indg) {
-                    indg = new Graphics();
-                    viewport.addChild(indg);
-                }
-                if (isNew) {
-                    indicators.set(element, indg);
-                }
+            //     if (!indg) {
+            //         indg = new Graphics();
+            //         viewport.addChild(indg);
+            //     }
+            //     if (isNew) {
+            //         indicators.set(element, indg);
+            //     }
 
-                indg.clear();
-                drawRect(indg, p1.x - 5, p1.y - 5, p2.x + 5, p2.y + 5);
-            });
+            //     indg.clear();
+            //     indg.zIndex = -1;
+            //     drawRect(indg, p1.x - 5, p1.y - 5, p2.x + 5, p2.y + 5);
+            // });
+
+            appContext?.setSelectedElements(selectedItems);
         }
     }
 

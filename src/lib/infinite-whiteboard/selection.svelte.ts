@@ -5,7 +5,7 @@ import RBush, { type BBox } from 'rbush';
 import { getViewPortContext } from "./context.svelte";
 
 export interface SelectionOptions {
-
+    onSelectionChange?: (selectedElements: WhiteboardElement[]) => void;
 }
 
 export interface RBrushItem extends BBox {
@@ -17,6 +17,7 @@ export class Selection {
     #options: SelectionOptions;
     #tree: RBush<RBrushItem> = new RBush();
     #viewportContext: ViewportContext;
+    #currentSelection = $state<WhiteboardElement[]>([]);
 
     constructor(options: MaybeGetter<SelectionOptions>) {
         this.#options = $derived(extract(options));
@@ -61,7 +62,7 @@ export class Selection {
         return this.#tree.all().some(e => e.ref.uid === el_id);
     }
 
-    getSelectedItems(bounds: BBox) {
+    getElementsInRange(bounds: BBox) {
 
         if (!this.#viewportContext) {
             return [];
@@ -69,5 +70,14 @@ export class Selection {
 
         let items = this.#tree.search(bounds).map(x => x.ref);
         return items;
+    }
+
+    setCurrentSelection(elements: WhiteboardElement[]) {
+        this.#currentSelection = elements;
+        this.#options.onSelectionChange?.(elements);
+    }
+
+    get currentSelection(): WhiteboardElement[] {
+        return this.#currentSelection;
     }
 }

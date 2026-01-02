@@ -1,6 +1,6 @@
-import type { FillInput, Graphics, StrokeInput } from "pixi.js";
+import type { FillInput, Graphics, GraphicsContext, StrokeInput } from "pixi.js";
 
-export function drawRect(graphics: Graphics, x1: number, y1: number, x2: number, y2: number, options?: {
+export function drawRect(graphics: Graphics | GraphicsContext, x1: number, y1: number, x2: number, y2: number, options?: {
     stroke?: StrokeInput,
     fill?: FillInput
 }) {

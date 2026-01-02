@@ -1,5 +1,5 @@
 import type { Viewport } from "pixi-viewport";
-import { Application, Bounds, Container, Graphics, type StrokeInput } from "pixi.js";
+import { Application, Bounds, Container, Graphics, Point, Transform, type StrokeInput } from "pixi.js";
 import type { Component } from "svelte";
 
 
@@ -11,7 +11,8 @@ export interface AppContext {
     //addWidget(widget: WidgetModel): void;
     //registerElement(gr: Omit<WhiteboardElement, 'uid'>): void;
     //unregisterElement(gr: WhiteboardElement): void;
-    getSelectedElements(bounds: Bounds): WhiteboardElement[];
+    getElementsInRange(bounds: Bounds): WhiteboardElement[];
+    setSelectedElements(elements: WhiteboardElement[]): void;
     addElement: (element: Omit<WhiteboardElement, 'uid' | 'register' | 'unRegister' | 'graphics'>) => WhiteboardElement;
     removeElement: (element: string) => void;
 }
@@ -66,11 +67,22 @@ export type WidgetEditorModel = {
     index: Number;
 }
 
-export interface ElementRegisterOptions {
+type ViewModelType = Record<PropertyKey, unknown> | object;
+
+export type DragDropAdapter<TViewModel extends ViewModelType> = (element: WhiteboardElement<TViewModel>, offset: Point) => TViewModel;
+export type DraggableOptions<TViewModel extends ViewModelType = Record<PropertyKey, unknown>> = {
+    onStart?: () => void;
+    onEnd?: (offset: Point) => void;
+    onMove?: (offset: Point) => void;
+    adapter: DragDropAdapter<TViewModel>;
+}
+
+export interface ElementRegisterOptions<TViewModel extends ViewModelType> {
     selectable: boolean;
+    draggable: false | DraggableOptions<TViewModel>
 };
 
-export interface WhiteboardElement<TModel extends Record<PropertyKey, unknown> | object = Record<PropertyKey, unknown>, TEditorModel extends Record<PropertyKey, unknown> | object = Record<PropertyKey, unknown>> {
+export interface WhiteboardElement<TModel extends ViewModelType = Record<PropertyKey, unknown>, TEditorModel extends Record<PropertyKey, unknown> | object = Record<PropertyKey, unknown>> {
     uid: string;
     name: string;
     graphics: Graphics;
@@ -78,6 +90,9 @@ export interface WhiteboardElement<TModel extends Record<PropertyKey, unknown> |
     viewModel: TModel;
     editor: Component<any>,
     editorModel?: TEditorModel,
-    register: (el: WhiteboardElement<TModel>, options: ElementRegisterOptions) => void;
+    register: (el: WhiteboardElement<TModel>, options: ElementRegisterOptions<TModel>) => void;
     unRegister: (el: WhiteboardElement<TModel>) => void;
+    transform: Transform;
+    updateViewModel: (payload: Partial<TModel>) => void;
+    _tmpData: any;
 }

@@ -8,6 +8,7 @@
 		enablePan?: boolean;
 		toolboxItems: ToolboxItem[];
 		onReady?: (ctx: ViewportContext) => void;
+		transformContainer: Container;
 	}
 </script>
 
@@ -20,7 +21,14 @@
 	import { browser } from '$app/environment';
 	import { watch } from 'runed';
 
-	let { children, grid = $bindable(), enablePan, toolboxItems, onReady }: ViewPortProps = $props();
+	let {
+		children,
+		grid = $bindable(),
+		enablePan,
+		toolboxItems,
+		onReady,
+		transformContainer
+	}: ViewPortProps = $props();
 
 	let context = $state<ContainerContext>({} as ContainerContext);
 	let viewportContext = $state<ViewportContext>({} as ViewportContext);
@@ -51,7 +59,7 @@
 
 	$effect(() => {
 		(async () => {
-			if (containerContext?.container && appContext?.app) {
+			if (containerContext?.container && appContext?.app && transformContainer) {
 				const app = appContext.app;
 
 				viewport = new Viewport({
@@ -74,6 +82,8 @@
 				const world = new Container();
 				viewport.addChild(world);
 				context.container = world;
+
+				viewport.addChild(transformContainer);
 
 				onReady?.(viewportContext);
 			}

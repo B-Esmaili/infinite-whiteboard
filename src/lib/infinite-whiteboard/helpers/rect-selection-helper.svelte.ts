@@ -31,6 +31,9 @@ export class RectSelectionHelper {
     }
 
     private handlePointerDown(e: FederatedPointerEvent) {
+        if (e.target !== this.#container)
+            return;
+
         if (!this.#options.enabled) {
             return;
         }
@@ -45,6 +48,11 @@ export class RectSelectionHelper {
     }
 
     private handlePointerUp(e: FederatedPointerEvent) {
+
+        if (!this.#isDown) {
+            return;
+        }
+
         if (!this.#options.enabled) {
             return;
         }

@@ -1,6 +1,6 @@
 import { unwrapValue } from "$lib/utils/misc.ts";
 import type { MaybeUnwrap } from "$lib/utils/types.ts";
-import { Graphics, type ApplicationOptions, type Bounds } from "pixi.js";
+import { Container, Graphics, Point, type ApplicationOptions, type Bounds } from "pixi.js";
 import { Application as PixiApp } from "pixi.js"
 import type { AppContext, ContainerContext, ToolboxItem, ViewportContext, WhiteboardElement } from "./types.ts";
 import { mount, setContext, tick, unmount, type Component } from "svelte";
@@ -15,6 +15,7 @@ import { UndoRedoCommand } from "./commands/undo-redo-command.ts";
 import { AddElementUndoCommand } from "./commands/add-object-command.ts";
 import { CommandManager } from "./commands/command-history.svelte.ts";
 import { v4 as uuidv4 } from 'uuid';
+import { TransformManager, type TransformElement } from "./helpers/transform-manager.svelte.ts";
 
 export interface ApplicaionProps {
     element: HTMLCanvasElement;
@@ -30,9 +31,11 @@ export class Application {
     #elements = $state<WhiteboardElement[]>([]);
     #ready = false;
     #contexts = new SvelteMap<string, unknown>();
-    #selection: Selection | undefined;
+    #selection = $state<Selection | undefined>();
     #commandManager: CommandManager = null as unknown as CommandManager;
     #viewInstances = new Map<string, any>;
+    #transformManager: TransformManager | null = null;
+    #transformContainer = $state<Container>();
 
     constructor(_props: MaybeUnwrap<ApplicaionProps>) {
         this.#props = $derived(unwrapValue(_props));
@@ -59,24 +62,43 @@ export class Application {
 
         element.graphics = new Graphics();
 
+        element.updateViewModel = (payload) => {
+            element.viewModel = {
+                ...element.viewModel,
+                ...payload
+            };
+        }
+
         element.register = (el, options) => {
             const viewport = this.#viewportContex.viewport;
             viewport.addChild(el.graphics);
+
             if (options.selectable) {
                 this.registerSelection(el);
+            }
+
+            if (options.draggable) {
+                this.#transformManager?.registerElement(element, options.draggable);
             }
         };
 
         element.unRegister = (el) => {
             this.#viewportContex.viewport.removeChild(el.graphics);
+
             if (this.#selection?.isElementRegistered(el)) {
                 this.unRegisterSelection(el);
             }
+
+            if (this.#transformManager?.isElementRegistered(el)) {
+                this.#transformManager.unRegisterElement(el);
+            }
         };
+
+        const el = this.#elements[this.#elements.length - 1]; // Get element from $state list so that we be able to update it 
 
         const instance = mount(element.view, {
             target: document.body,
-            props: element,
+            props: el,
             context: this.#contexts,
         });
 
@@ -107,8 +129,29 @@ export class Application {
         return el;
     }
 
+    private resetTransformContainer() {
+        this.#transformContainer?.position.set(0, 0);
+        this.#transformContainer?.updateTransform({
+            x: 0,
+            y: 0,
+            originX: 0,
+            originY: 0,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1
+        });
+    }
+
     removeElement(uid: string) {
         this.removeElementInternal(uid);
+    }
+
+    private updateElementInternal(uid: string, viewModel: Record<PropertyKey, unknown>) {
+        const el = this.#elements.find(e => e.uid === uid);
+
+        if (el) {
+            el.viewModel = $state.snapshot(viewModel);
+        }
     }
 
     init() {
@@ -145,7 +188,8 @@ export class Application {
             toolboxItems: ToolboxItems,
             addElement: this.addElement.bind(this),
             removeElement: this.removeElement.bind(this),
-            getSelectedElements: this.getSelectedElements.bind(this),
+            getElementsInRange: this.getElementsInRange.bind(this),
+            setSelectedElements: this.setSelectedElements.bind(this)
         } as AppContext;
 
         setContext("whiteboard-context", this.#appContext);
@@ -153,14 +197,18 @@ export class Application {
 
         let grid = $state<Grid>();
 
-
         this.#contexts.set("whiteboard-context", this.#appContext);
         this.#contexts.set("container-context", this.#containerContext);
 
+        this.#transformContainer = new Container({
+            isRenderGroup: true
+        });
+
         let viewPortProps = $state({
-            enablePan: enablePan,
+            enablePan: false,
             grid,
             toolboxItems: ToolboxItems,
+            transformContainer: this.#transformContainer as Container,
             onReady: (ctx: ViewportContext) => {
                 this.#contexts.set("viewport-context", ctx);
                 this.#viewportContex = ctx;
@@ -181,6 +229,15 @@ export class Application {
 
         this.#commandManager = new CommandManager(this.#viewportContex);
 
+        this.#transformManager = new TransformManager(() => this.#containerContext?.container, () => this.#viewportContex?.viewport, () => this.#selection!, {
+            onMove: (offset: Point, elements: TransformElement[]) => {
+                for (const el of elements) {                    
+                    const updatedVm = el.options.adapter(el.element, offset);
+                    this.updateElementInternal(el.element.uid, updatedVm);
+                }
+            }
+        });
+
         $effect(() => {
             (async () => {
                 const _app = new PixiApp();
@@ -195,6 +252,7 @@ export class Application {
                 this.#appContext.app = _app;
                 this.#appContext.element = element;
                 this.#containerContext.container = _app.stage;
+                const _this = this;
             })()
 
             return () => {
@@ -211,8 +269,12 @@ export class Application {
         this.#selection?.removeElement(el);
     }
 
-    private getSelectedElements(bounds: Bounds): WhiteboardElement[] {
-        return this.#selection?.getSelectedItems(bounds) ?? [];
+    private getElementsInRange(bounds: Bounds): WhiteboardElement[] {
+        return this.#selection?.getElementsInRange(bounds) ?? [];
+    }
+
+    private setSelectedElements(elements: WhiteboardElement[]) {
+        this.#selection?.setCurrentSelection(elements);
     }
 
     get ready() {
