@@ -211,7 +211,7 @@ export class TransformManager {
     }
 
     isElementRegistered(element: WhiteboardElement) {
-        return Boolean(this.#elements.find((e) => e.element === element));
+        return Boolean(this.#elements.find((e) => e.element.uid === element.uid));
     }
 
     getManyElements(elements: WhiteboardElement[]) {

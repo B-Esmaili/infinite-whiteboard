@@ -1,8 +1,7 @@
 import { getAppContext, getViewPortContext } from "@lib/infinite-whiteboard/context.svelte";
-import { drawRect } from "@lib/infinite-whiteboard/helpers/drawing-helper";
 import { RectSelectionHelper } from "@lib/infinite-whiteboard/helpers/rect-selection-helper.svelte";
 import type { WhiteboardElement } from "@lib/infinite-whiteboard/types";
-import { Bounds, Graphics, type Rectangle } from "pixi.js";
+import { Bounds, Graphics } from "pixi.js";
 
 export function handle() {
     let appContext = getAppContext();
@@ -22,29 +21,7 @@ export function handle() {
                     viewport.removeChild(item[1]);
                     indicators.delete(item[0]);
                 }
-            });
-
-            // selectedItems.forEach(element => {
-            //     let indg = indicators.get(element);
-            //     const isNew = indg === undefined;
-
-            //     const bounds = element.graphics.getBounds();
-
-            //     const p1 = viewport.toWorld(bounds.minX - 5, bounds.minY - 5);
-            //     const p2 = viewport.toWorld(bounds.maxX + 5, bounds.maxY + 5);
-
-            //     if (!indg) {
-            //         indg = new Graphics();
-            //         viewport.addChild(indg);
-            //     }
-            //     if (isNew) {
-            //         indicators.set(element, indg);
-            //     }
-
-            //     indg.clear();
-            //     indg.zIndex = -1;
-            //     drawRect(indg, p1.x - 5, p1.y - 5, p2.x + 5, p2.y + 5);
-            // });
+            });         
 
             appContext?.setSelectedElements(selectedItems);
         }
