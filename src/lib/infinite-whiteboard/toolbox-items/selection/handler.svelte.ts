@@ -1,10 +1,12 @@
-import { getAppContext, getViewPortContext } from "@lib/infinite-whiteboard/context.svelte";
+import { getAppContext, getContainerContext, getViewPortContext } from "@lib/infinite-whiteboard/context.svelte";
 import { RectSelectionHelper } from "@lib/infinite-whiteboard/helpers/rect-selection-helper.svelte";
 import type { WhiteboardElement } from "@lib/infinite-whiteboard/types";
 import { Bounds, Graphics } from "pixi.js";
 
 export function handle() {
     let appContext = getAppContext();
+    const viewportContext = getViewPortContext();
+
     let tool = $derived(appContext?.activeTool);
 
     let viewport = $derived.by(() => getViewPortContext()?.viewport);
@@ -21,11 +23,12 @@ export function handle() {
                     viewport.removeChild(item[1]);
                     indicators.delete(item[0]);
                 }
-            });         
+            });
 
             appContext?.setSelectedElements(selectedItems);
         }
     }
+
 
     new RectSelectionHelper(() => viewport, () => ({
         enabled: isEnabled,
@@ -38,6 +41,16 @@ export function handle() {
                 color: 0xb4b0ff,
                 width: 1
             }
+        },
+        onSelectionStart: (e) => {
+
+            //const selectedItems = appContext?.getSelectedElements();
+
+            //if (e.target !== viewportContext.viewport 
+                 //&& !selectedItems?.some(el => el.graphics === e.target)
+                 //){
+                //return false;
+            //}
         },
         onSelectionDone: (bounds: Bounds) => {
             updateSelection(bounds);

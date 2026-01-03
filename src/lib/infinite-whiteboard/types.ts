@@ -13,7 +13,8 @@ export interface AppContext {
     //unregisterElement(gr: WhiteboardElement): void;
     getElementsInRange(bounds: Bounds): WhiteboardElement[];
     setSelectedElements(elements: WhiteboardElement[]): void;
-    addElement: (element: Omit<WhiteboardElement, 'uid' | 'register' | 'unRegister' | 'graphics'>) => WhiteboardElement;
+    getSelectedElements(): WhiteboardElement[];
+    addElement: (element: Omit<WhiteboardElement, 'uid' | 'register' | 'unRegister' | 'graphics' | 'transform' | 'updateViewModel'>) => WhiteboardElement;
     removeElement: (element: string) => void;
 }
 
@@ -94,5 +95,4 @@ export interface WhiteboardElement<TModel extends ViewModelType = Record<Propert
     unRegister: (el: WhiteboardElement<TModel>) => void;
     transform: Transform;
     updateViewModel: (payload: Partial<TModel>) => void;
-    _tmpData: any;
 }

@@ -6,6 +6,7 @@ import type { ViewportContext } from "../types";
 
 export interface RectSelectionOptions {
     enabled: boolean;
+    onSelectionStart?: (e: FederatedPointerEvent) => boolean | void;
     onSelectionDone?: (rect: Bounds) => void;
     onSelectionChange?: (rect: Bounds) => void;
     graphics?: boolean | {
@@ -31,12 +32,18 @@ export class RectSelectionHelper {
     }
 
     private handlePointerDown(e: FederatedPointerEvent) {
-        if (e.target !== this.#container)
-            return;
 
         if (!this.#options.enabled) {
             return;
         }
+
+        if (this.#options.onSelectionStart) {
+            const result = this.#options.onSelectionStart(e);
+            if (result === false) {
+                return;
+            }
+        }
+
         this.#isDown = true;
         this.#container!.addChild(this.#selectionRect);
 

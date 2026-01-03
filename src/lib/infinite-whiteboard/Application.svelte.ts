@@ -189,7 +189,8 @@ export class Application {
             addElement: this.addElement.bind(this),
             removeElement: this.removeElement.bind(this),
             getElementsInRange: this.getElementsInRange.bind(this),
-            setSelectedElements: this.setSelectedElements.bind(this)
+            setSelectedElements: this.setSelectedElements.bind(this),
+            getSelectedElements: this.getSelectedElements.bind(this)
         } as AppContext;
 
         setContext("whiteboard-context", this.#appContext);
@@ -231,7 +232,7 @@ export class Application {
 
         this.#transformManager = new TransformManager(() => this.#containerContext?.container, () => this.#viewportContex?.viewport, () => this.#selection!, {
             onMove: (offset: Point, elements: TransformElement[]) => {
-                for (const el of elements) {                    
+                for (const el of elements) {
                     const updatedVm = el.options.adapter(el.element, offset);
                     this.updateElementInternal(el.element.uid, updatedVm);
                 }
@@ -275,6 +276,10 @@ export class Application {
 
     private setSelectedElements(elements: WhiteboardElement[]) {
         this.#selection?.setCurrentSelection(elements);
+    }
+
+    private getSelectedElements(): WhiteboardElement[] {
+        return this.#selection?.currentSelection ?? [];
     }
 
     get ready() {

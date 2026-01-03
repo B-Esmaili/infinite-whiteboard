@@ -124,7 +124,8 @@ export class TransformManager {
                 this.#transformContainer.zIndex = Number.POSITIVE_INFINITY;
                 this.#viewport.addChild(this.#transformContainer);
             }
-
+            
+            this.#transformContainer?.position.set(0, 0);
             const [bounds, allBounds] = this.findMinMaxBounds(selection);
             this.#transformGraphics.clear();
 

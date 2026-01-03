@@ -44,6 +44,7 @@ export class DragDropHelper {
         // if (!this.isGraphicsRegistered(e.target as Graphics)) {
         //     return;
         // }
+        e.stopImmediatePropagation();
         const worldCoords = this.#viewport?.toWorld(new Point(e.x, e.y))!;
 
         this.#isDown = true;
