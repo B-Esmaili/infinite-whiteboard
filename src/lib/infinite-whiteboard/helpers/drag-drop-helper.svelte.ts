@@ -45,6 +45,7 @@ export class DragDropHelper {
         //     return;
         // }
         e.stopImmediatePropagation();
+        e.stopPropagation();
         const worldCoords = this.#viewport?.toWorld(new Point(e.x, e.y))!;
 
         this.#isDown = true;
@@ -53,7 +54,6 @@ export class DragDropHelper {
     }
 
     private handleDragMove(e: FederatedPointerEvent) {
-
         if (this.#isDown && this.#startPos) {
 
             const worldCoords = this.#viewport?.toWorld(new Point(e.x, e.y))!;

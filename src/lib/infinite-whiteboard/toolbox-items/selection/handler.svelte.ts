@@ -29,7 +29,6 @@ export function handle() {
         }
     }
 
-
     new RectSelectionHelper(() => viewport, () => ({
         enabled: isEnabled,
         graphics: {

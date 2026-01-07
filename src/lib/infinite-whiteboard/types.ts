@@ -1,5 +1,5 @@
 import type { Viewport } from "pixi-viewport";
-import { Application, Bounds, Container, Graphics, Point, Transform, type StrokeInput } from "pixi.js";
+import { Application, Bounds, Container, Graphics, GraphicsContext, Point, Transform, type StrokeInput } from "pixi.js";
 import type { Component } from "svelte";
 
 
@@ -71,16 +71,26 @@ export type WidgetEditorModel = {
 type ViewModelType = Record<PropertyKey, unknown> | object;
 
 export type DragDropAdapter<TViewModel extends ViewModelType> = (element: WhiteboardElement<TViewModel>, offset: Point) => TViewModel;
-export type DraggableOptions<TViewModel extends ViewModelType = Record<PropertyKey, unknown>> = {
+export type RotateAdapter<TViewModel extends ViewModelType> = (element: WhiteboardElement<TViewModel>, degree: number) => TViewModel;
+export type ScaleAdapter<TViewModel extends ViewModelType> = (
+    element: WhiteboardElement<TViewModel>,
+    applyScale: (bounds : Bounds) => Bounds,
+    finalize : boolean
+) => TViewModel | GraphicsContext;
+export type TransformOptions<TViewModel extends ViewModelType = Record<PropertyKey, unknown>> = {
     onStart?: () => void;
     onEnd?: (offset: Point) => void;
-    onMove?: (offset: Point) => void;
-    adapter: DragDropAdapter<TViewModel>;
+    onProgress?: (offset: Point) => void;
+    moveAdapter?: DragDropAdapter<TViewModel>;
+    roateAdapter?: RotateAdapter<TViewModel>;
+    scaleAdapter?: ScaleAdapter<TViewModel>;
 }
 
 export interface ElementRegisterOptions<TViewModel extends ViewModelType> {
     selectable: boolean;
-    draggable: false | DraggableOptions<TViewModel>
+    draggable?: false | Omit<TransformOptions<TViewModel>, 'roateAdapter' | 'scaleAdapter'>;
+    rotatable?: false | Omit<TransformOptions<TViewModel>, 'moveAdapter' | 'scaleAdapter'>
+    scalable?: false | Omit<TransformOptions<TViewModel>, 'roateAdapter' | 'moveAdapter'>
 };
 
 export interface WhiteboardElement<TModel extends ViewModelType = Record<PropertyKey, unknown>, TEditorModel extends Record<PropertyKey, unknown> | object = Record<PropertyKey, unknown>> {

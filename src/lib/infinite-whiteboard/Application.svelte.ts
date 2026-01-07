@@ -3,7 +3,7 @@ import type { MaybeUnwrap } from "$lib/utils/types.ts";
 import { Container, Graphics, Point, type ApplicationOptions, type Bounds } from "pixi.js";
 import { Application as PixiApp } from "pixi.js"
 import type { AppContext, ContainerContext, ToolboxItem, ViewportContext, WhiteboardElement } from "./types.ts";
-import { mount, setContext, tick, unmount, type Component } from "svelte";
+import { mount, setContext, unmount } from "svelte";
 import { Toolbar, type ToolbarItem } from "./toolbar/toolbar.svelte.ts";
 import ToolboxItems from "./toolbox-items";
 import type { Grid } from "./grid.svelte.ts";
@@ -11,7 +11,6 @@ import ViewPort from "./widgets/view-port.svelte";
 import { watch } from "runed";
 import { SvelteMap } from "svelte/reactivity";
 import { Selection } from "./selection.svelte.ts";
-import { UndoRedoCommand } from "./commands/undo-redo-command.ts";
 import { AddElementUndoCommand } from "./commands/add-object-command.ts";
 import { CommandManager } from "./commands/command-history.svelte.ts";
 import { v4 as uuidv4 } from 'uuid';
@@ -73,12 +72,17 @@ export class Application {
             const viewport = this.#viewportContex.viewport;
             viewport.addChild(el.graphics);
 
+
             if (options.selectable) {
                 this.registerSelection(el);
             }
 
-            if (options.draggable) {
-                this.#transformManager?.registerElement(element, options.draggable);
+            if (options.draggable || options.scalable || options.rotatable) {
+                this.#transformManager?.registerElement(element, {
+                    draggable: options.draggable,
+                    scalable: options.scalable,
+                    rotatable: options.rotatable,
+                });
             }
         };
 
@@ -113,7 +117,6 @@ export class Application {
         }
 
         const el = this.#elements.at(elToRemoveIndex)
-        const view = el?.view;
 
         this.#elements.splice(elToRemoveIndex, 1);
 
@@ -127,20 +130,7 @@ export class Application {
         }
 
         return el;
-    }
-
-    private resetTransformContainer() {
-        this.#transformContainer?.position.set(0, 0);
-        this.#transformContainer?.updateTransform({
-            x: 0,
-            y: 0,
-            originX: 0,
-            originY: 0,
-            rotation: 0,
-            scaleX: 1,
-            scaleY: 1
-        });
-    }
+    }   
 
     removeElement(uid: string) {
         this.removeElementInternal(uid);
@@ -231,10 +221,24 @@ export class Application {
         this.#commandManager = new CommandManager(this.#viewportContex);
 
         this.#transformManager = new TransformManager(() => this.#containerContext?.container, () => this.#viewportContex?.viewport, () => this.#selection!, {
-            onMove: (offset: Point, elements: TransformElement[]) => {
+            onMoveProgress: (offset: Point, elements: TransformElement[]) => {
                 for (const el of elements) {
-                    const updatedVm = el.options.adapter(el.element, offset);
-                    this.updateElementInternal(el.element.uid, updatedVm);
+                    if (el.draggable) {
+                        const updatedVm = el.draggable?.moveAdapter?.(el.element, offset) ?? el.element.viewModel;
+                        this.updateElementInternal(el.element.uid, updatedVm);
+                    }
+                }
+            },
+            onScaleProgress: (applyScale: (bounds: Bounds) => Bounds, elements: TransformElement[], done: boolean) => {
+                for (const el of elements) {
+                    if (el.scalable) {
+                        const updatedData = el.scalable.scaleAdapter?.(el.element, applyScale, done) ?? el.element.viewModel;
+                        if (done) {
+                            this.updateElementInternal(el.element.uid, updatedData);
+                        } else {
+                            el.element.graphics.context = updatedData;
+                        }
+                    }
                 }
             }
         });
