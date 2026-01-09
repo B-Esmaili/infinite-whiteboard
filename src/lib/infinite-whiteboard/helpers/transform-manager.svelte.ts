@@ -1,23 +1,25 @@
 import { extract, watch, type MaybeGetter } from "runed";
 import type { ElementRegisterOptions, TransformOptions, WhiteboardElement } from "../types";
-import { Bounds, Container, Graphics, Point } from "pixi.js";
+import { Bounds, Container, Graphics, Matrix, Point } from "pixi.js";
 import type { Selection } from "../selection.svelte";
 import { drawRect } from "./drawing-helper";
 import type { Viewport } from "pixi-viewport";
 import { DragDropHelper } from "./drag-drop-helper.svelte";
 import { tick } from "svelte";
+import { degToRadian } from "./math-utils";
 
 
 export interface DragDropOptions {
-    onMoveProgress: (offset: Point, elements: TransformElement[]) => void;
-    onScaleProgress: (applyScale: (bounds: Bounds) => Bounds, elements: TransformElement[], done: boolean) => void;
+    onMoveProgress: (offset: Point, element: TransformElement) => void;
+    onScaleProgress: (applyScale: (bounds: Bounds) => Bounds, elements: TransformElement, done: boolean) => void;
+    onRotate: (elements: TransformElement[], rotation: number, pivot: Point) => void;
 }
 
 export interface TransformElement {
     element: WhiteboardElement;
     draggable?: false | Omit<TransformOptions<any>, 'roateAdapter' | 'scaleAdapter'>;
     scalable?: false | Omit<TransformOptions<any>, 'roateAdapter' | 'moveAdapter'>;
-    rotatable?: false | Omit<TransformOptions<any>, 'moveAdapter' | 'scaleAdapter'>;
+    rotatable?: boolean;
 }
 
 export class TransformManager {
@@ -30,15 +32,17 @@ export class TransformManager {
     #transformGraphics = $state<Graphics | null>(null);
     #transformControlContainer = $state<Container | null>(null);
     #transformItemsWrap = $state<Container | null>(null);
+    #transformGraphicsWrap = $state<Container | null>(null);
     #leftTopScaleGraphics = $state<Graphics | null>(null);
     #rightTopScaleGraphics = $state<Graphics | null>(null);
     #leftBottomScaleGraphics = $state<Graphics | null>(null);
     #rightBottomScaleGraphics = $state<Graphics | null>(null);
     #rotateGraphics = $state<Graphics | null>(null);
-    #cumulativeOffset = new Point(0, 0);
+    //#cumulativeOffset = new Point(0, 0);
     #initialBounds = $state(new Bounds());
     #currentBounds = $state<Bounds | null>(null);
     #currentSelection: WhiteboardElement[];
+    #rotationOffsets: Point[] = [];
 
     constructor(container: MaybeGetter<Container>, viewport: MaybeGetter<Viewport>, selection: MaybeGetter<Selection>, options: MaybeGetter<DragDropOptions>) {
         this.#options = $derived(extract(options));
@@ -76,13 +80,24 @@ export class TransformManager {
             onEnd: this.handleEndRightTopResize.bind(this),
         }));
 
+        new DragDropHelper(() => this.#rotateGraphics, () => this.#viewport, () => ({
+            onStart: this.handleStartRotate.bind(this),
+            onMove: this.handleMoveRotate.bind(this),
+            onEnd: this.handleEndRotate.bind(this),
+        }));
+
         this.#currentSelection = $derived(this.#selection?.currentSelection ?? []);
 
         watch(() => this.#selection?.currentSelection ?? [], this.handleSelectionChange.bind(this));
-        //watch(() => this.#leftTopGraphicsOffset, this.updateTransformGraphics.bind(this));
     }
 
-    private handleScale(offset: Point, rel: string , done : boolean) {
+    private boundsToWorld(bounds: Bounds) {
+        const p1 = this.#viewport.toWorld({ x: bounds.minX, y: bounds.minY });
+        const p2 = this.#viewport.toWorld({ x: bounds.maxX, y: bounds.maxY });
+        return { minX: p1.x, minY: p1.y, maxX: p2.x, maxY: p2.y } as Bounds;
+    }
+
+    private handleScale(offset: Point, rel: string, done: boolean) {
 
         let newMinX = 0;
         let newMinY = 0;
@@ -122,8 +137,14 @@ export class TransformManager {
 
         const selectedItems = this.getManyElements(this.#currentSelection);
 
-        const applyScale = (oldBounds: Bounds) => {
+        let allMinX: number | null = null;
+        let allMinY: number | null = null;
+        let allMaxX: number | null = null;
+        let allMaxY: number | null = null;
 
+        let allBounds: Bounds[] = [];
+
+        const applyScale = (oldBounds: Bounds) => {
             const rel_min_x = oldBounds.minX - this.#initialBounds.minX;
             const rel_min_y = oldBounds.minY - this.#initialBounds.minY;
             const rel_max_x = oldBounds.maxX - this.#initialBounds.minX;
@@ -133,7 +154,6 @@ export class TransformManager {
             let new_min_y = 0;
             let new_max_x = 0;
             let new_max_y = 0;
-
 
             new_min_x = newMinX + scaleX * rel_min_x;
             new_min_y = newMinY + scaleY * rel_min_y;
@@ -146,16 +166,37 @@ export class TransformManager {
                 maxX: new_max_x,
                 maxY: new_max_y,
             } as Bounds;
+
+            allBounds.push(newBounds);
+
+            if (!allMinX || newBounds.minX < allMinX) {
+                allMinX = newBounds.minX;
+            }
+
+            if (!allMinY || newBounds.minY < allMinY) {
+                allMinY = newBounds.minY;
+            }
+
+            if (!allMaxX || newBounds.maxX > allMaxX) {
+                allMaxX = newBounds.maxY;
+            }
+
+            if (!allMaxY || newBounds.maxY > allMaxY) {
+                allMaxY = newBounds.maxY;
+            }
+
             return newBounds;
         }
 
-        this.#options.onScaleProgress(applyScale, selectedItems, done);
+        for (const el of selectedItems) {
+            this.#options.onScaleProgress(applyScale, el, done);
+        }
 
         this.#currentBounds = {
-            minX: newMinX,
-            minY: newMinY,
-            maxX: newMaxX,
-            maxY: newMaxY,
+            minX: newMinX!,
+            minY: newMinY!,
+            maxX: newMaxX!,
+            maxY: newMaxY!
         } as Bounds;
 
         this.showTransformGraphics(this.#currentBounds, []);
@@ -165,6 +206,7 @@ export class TransformManager {
 
     private reparentSelectionToTransformContainer(items: TransformElement[]) {
         for (const sel of items) {
+            sel.element.graphics.__oldParent = sel.element.graphics.parent;
             this.#transformItemsWrap?.reparentChild(sel.element.graphics);
         }
     }
@@ -183,12 +225,12 @@ export class TransformManager {
 
     private endScale(offset: Point, rel: string) {
 
-        const lastBounds = this.handleScale(offset, rel , true);
+        const lastBounds = this.handleScale(offset, rel, true);
 
         const selectedScalableItems = this.getManyElements(this.#currentSelection);
         for (const sel of selectedScalableItems) {
             if (sel.element.graphics.parent !== this.#viewport) {
-                this.#viewport?.reparentChild(sel.element.graphics);
+                sel.element.graphics.__oldParent?.reparentChild(sel.element.graphics);
                 if (sel.scalable) {
                     sel.scalable.onEnd?.(offset);
                 }
@@ -206,7 +248,7 @@ export class TransformManager {
     }
 
     private handleMoveLeftTopResize(offset: Point) {
-        this.handleScale(offset, "lt" , false);
+        this.handleScale(offset, "lt", false);
     }
 
     private handleEndLeftTopResize(offset: Point) {
@@ -220,7 +262,7 @@ export class TransformManager {
     }
 
     private handleMoveRightBottomResize(offset: Point) {
-        this.handleScale(offset, "rb",false);
+        this.handleScale(offset, "rb", false);
     }
 
     private handleEndRightBottomResize(offset: Point) {
@@ -236,7 +278,7 @@ export class TransformManager {
     }
 
     private handleMoveLeftBottomResize(offset: Point) {
-        this.handleScale(offset, "lb" , false);
+        this.handleScale(offset, "lb", false);
     }
 
     private handleEndLeftBottomResize(offset: Point) {
@@ -253,7 +295,7 @@ export class TransformManager {
     }
 
     private handleMoveRightTopResize(offset: Point) {
-        this.handleScale(offset, "rt" , false);
+        this.handleScale(offset, "rt", false);
     }
 
     private handleEndRightTopResize(offset: Point) {
@@ -268,28 +310,111 @@ export class TransformManager {
     }
 
     private handleMove(offset: Point) {
-        const selectedDraggableItems = this.getManyElements(this.#currentSelection);
+        //const selectedDraggableItems = this.getManyElements(this.#currentSelection);
 
-        const offsetX = this.#cumulativeOffset.x + offset.x;
-        const offsetY = this.#cumulativeOffset.y + offset.y;
-        for (const sel of selectedDraggableItems) {
-            this.#transformContainer?.position.set(offsetX, offsetY);
-        }
+        //const offsetX = this.#cumulativeOffset.x + offset.x;
+        //const offsetY = this.#cumulativeOffset.y + offset.y;
+        //for (const sel of selectedDraggableItems) {
+        this.#transformContainer?.position.set(offset.x, offset.y);
+        //}
+    }
+
+    private applyRotationToPoint(gr: Graphics, point: Point) {
+        const mat = new Matrix();
+        const rot = Math.atan2(gr.localTransform.b, gr.localTransform.a);
+        mat.rotate(rot);
+        const newOffset = mat.applyInverse({ x: point.x, y: point.y });
+        return newOffset
     }
 
     private async handleEndMove(offset: Point) {
         const selectedDraggableItems = this.getManyElements(this.#currentSelection);
         for (const sel of selectedDraggableItems) {
-            this.#viewport?.reparentChild(sel.element.graphics);
+            sel.element.graphics.__oldParent?.reparentChild(sel.element.graphics);
             sel.element.graphics.position.set(0, 0);
+            const newOffset = this.applyRotationToPoint(sel.element.graphics, offset);
+            this.#options.onMoveProgress(new Point(newOffset.x, newOffset.y), sel);
         }
-        this.#options.onMoveProgress(new Point(offset.x, offset.y), selectedDraggableItems);
-        this.#cumulativeOffset = new Point(offset.x + this.#cumulativeOffset.x, offset.y + this.#cumulativeOffset.y);
+
+        //this.#options.onMoveProgress(new Point(offset.x, offset.y), selectedDraggableItems);
+        //this.#cumulativeOffset = new Point(offset.x + this.#cumulativeOffset.x, offset.y + this.#cumulativeOffset.y);
 
         await tick();
 
         this.hideTransformGraphics();
         this.handleSelectionChange(this.#currentSelection);
+    }
+
+    private handleStartRotate(loc: Point) {
+        const selectedDraggableItems = this.getManyElements(this.#currentSelection);
+        this.reparentSelectionToTransformContainer(selectedDraggableItems);
+    }
+
+    private getAngleFromLines(offset: Point) {
+        const angle = Math.atan2(offset.x, - offset.y);
+        return angle;
+    }
+
+    private aggrigateOffset(points: Point[]) {
+        return points.reduce((p, c) => ({ x: p.x + c.x, y: p.y + c.y } as Point), new Point(0, 0));
+    }
+
+    private handleMoveRotate(offset: Point) {
+        const anchor = new Point(this.#initialBounds.minX + (this.#initialBounds.maxX - this.#initialBounds.minX) / 2, this.#initialBounds.minY + (this.#initialBounds.maxY - this.#initialBounds.minY) / 2);
+
+        const FAKE_OFFSET = 10;
+
+        const angle = this.getAngleFromLines({ x: offset.x, y: offset.y - FAKE_OFFSET } as Point);
+
+        if (this.#transformGraphicsWrap && this.#transformItemsWrap && this.#transformControlContainer) {
+            this.#transformGraphicsWrap.pivot.set(anchor.x, anchor.y);
+            this.#transformGraphicsWrap.position.set(anchor.x, anchor.y);
+            this.#transformGraphicsWrap.rotation = angle;
+
+            this.#transformItemsWrap.pivot.set(anchor.x, anchor.y);
+            this.#transformItemsWrap.position.set(anchor.x, anchor.y);
+            this.#transformItemsWrap.rotation = angle;
+
+            this.#transformControlContainer.pivot.set(anchor.x, anchor.y);
+            this.#transformControlContainer.position.set(anchor.x, anchor.y);
+            this.#transformControlContainer.rotation = angle;
+        }
+    }
+
+    private handleEndRotate(offset: Point) {
+        const selectedElements = this.getManyElements(this.#currentSelection);
+
+        if (this.#transformItemsWrap && this.#transformGraphicsWrap) {
+
+            //const aggOffset = this.aggrigateOffset(this.#rotationOffsets.concat(offset));
+
+            //this.#transformGraphicsWrap.rotation = Math.atan2(aggOffset.x,aggOffset.y);
+
+            const curRotation = this.#transformItemsWrap.rotation;
+            this.#transformItemsWrap.rotation = 0;
+
+            for (const sel of selectedElements) {
+                sel.element.graphics.__oldParent?.reparentChild(sel.element.graphics);
+                sel.element.graphics.rotation = 0;
+                sel.element.graphics.position.set(0, 0);
+                sel.element.graphics.pivot.set(0, 0);
+            }
+
+            if (this.#transformItemsWrap) {
+                this.#options.onRotate(selectedElements, curRotation, { x: this.#transformItemsWrap.pivot.x, y: this.#transformItemsWrap.pivot.y } as Point);
+            }
+
+            //this.#transformItemsWrap.rotation = curRotation;
+            //this.#transformGraphicsWrap.rotation = curRotation;
+            //this.#transformGraphicsWrap.rotation = curRotation;
+
+            tick().then(() => {
+                this.hideTransformGraphics();
+                this.handleSelectionChange($state.eager(this.#selection.currentSelection));
+            });
+
+            this.#rotationOffsets.push(offset);
+        }
     }
 
     private findMinMaxBounds(elements: WhiteboardElement[]): [Bounds, Bounds[]] {
@@ -338,6 +463,7 @@ export class TransformManager {
 
         const w = 10;
         const hw = w / 2;
+        const _this = this;
 
         function createOrGetScaleGr(label: string, pos: { x: number, y: number }, cursor: string, shape: "rect" | "circle", onReady: (gr: Graphics) => void) {
 
@@ -380,7 +506,8 @@ export class TransformManager {
         if (this.#container) {
             if (!this.#transformGraphics) {
                 this.#transformContainer = new Container({
-                    isRenderGroup: true
+                    isRenderGroup: true,
+                    label: "transformContainer"
                 });
 
                 this.#transformControlContainer = new Container({
@@ -390,14 +517,20 @@ export class TransformManager {
                 this.#transformItemsWrap = new Container({
                     isRenderGroup: true,
                     label: "itemsWrap"
-                })
+                });
+
+                this.#transformGraphicsWrap = new Container({
+                    isRenderGroup: true,
+                    label: "graphicsWrap"
+                });
 
                 this.#transformGraphics = new Graphics();
                 this.#transformGraphics.eventMode = "static";
                 this.#transformGraphics.cursor = "move";
 
                 this.#transformContainer?.addChild(this.#transformItemsWrap);
-                this.#transformItemsWrap?.addChild(this.#transformGraphics);
+                this.#transformContainer?.addChild(this.#transformGraphicsWrap);
+                this.#transformGraphicsWrap?.addChild(this.#transformGraphics);
                 this.#transformContainer?.addChild(this.#transformControlContainer);
 
                 this.#transformContainer.zIndex = Number.POSITIVE_INFINITY - 1;
@@ -423,12 +556,22 @@ export class TransformManager {
                 });
             }
 
-            const minPt = this.#viewport.toWorld(bounds.minX, bounds.minY);
-            const maxPt = this.#viewport.toWorld(bounds.maxX, bounds.maxY);
+            // const minPt = this.#viewport.toWorld(bounds.minX, bounds.minY);
+            // const maxPt = this.#viewport.toWorld(bounds.maxX, bounds.maxY);
 
             const pad = 5;
 
-            drawRect(this.#transformGraphics, minPt.x - pad, minPt.y - pad, maxPt.x + pad, maxPt.y + pad, {
+            drawRect(this.#transformGraphics, bounds.minX - pad, bounds.minY - pad, bounds.maxX + pad, bounds.maxY + pad, {
+                fill: {
+                    color: "#0000ee05",
+                },
+                stroke: {
+                    color: "#458",
+                    width: 3,
+                }
+            });
+
+            drawRect(this.#transformGraphics, bounds.minX - pad, bounds.minY - pad, bounds.maxX + pad, bounds.maxY + pad, {
                 fill: {
                     color: "#0000ee05",
                 },
@@ -444,15 +587,18 @@ export class TransformManager {
         if (this.#transformContainer) {
             this.#viewport.removeChild(this.#transformContainer);
             this.#transformGraphics = null;
+            //this.#transformContainer.rotation = 0;
+            //this.#transformContainer.pivot.set(0, 0);
+            //this.#transformContainer.position.set(0, 0);
         }
     }
 
-    private handleSelectionChange(selection: WhiteboardElement[]) {
+    private handleSelectionChange(selection: WhiteboardElement[], oldSelection?: WhiteboardElement[]) {
         if (!this.#container) {
             return;
         }
 
-        this.#cumulativeOffset = new Point(0, 0);
+        this.#rotationOffsets = [];
 
         this.refreshBounds(selection);
     }
@@ -461,8 +607,8 @@ export class TransformManager {
         if (selection.length) {
             const [bounds, allBounds] = this.findMinMaxBounds(selection);
 
-            this.#initialBounds = bounds;
-            this.showTransformGraphics(bounds, allBounds);
+            this.#initialBounds = this.boundsToWorld(bounds);
+            this.showTransformGraphics(this.#initialBounds, allBounds);
         } else {
             this.hideTransformGraphics();
         }

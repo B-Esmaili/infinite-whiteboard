@@ -27,6 +27,16 @@ export class Selection {
     addElement(gr: WhiteboardElement | WhiteboardElement[]) {
         const items = Array.isArray(gr) ? gr as WhiteboardElement[] : [gr];
 
+        // remove old if already exists
+
+        if (Array.isArray(gr)) {
+            for (const item of gr) {
+                this.removeElement(item);
+            }
+        } else {
+            this.removeElement(gr);
+        }
+
         const itemsWithBounds = items.map((item) => {
             const bounds = item.graphics.getBounds();
 

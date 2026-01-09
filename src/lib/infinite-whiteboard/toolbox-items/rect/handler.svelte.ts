@@ -1,6 +1,6 @@
 import { getAppContext, getViewPortContext } from "@lib/infinite-whiteboard/context.svelte"
 import { Bounds, Rectangle } from "pixi.js";
-import RectWidget from "@lib/infinite-whiteboard/widgets/rect-widget.svelte";
+import RectWidget from "@lib/infinite-whiteboard/elements/rect-widget.svelte";
 import RectEditor from "@lib/infinite-whiteboard/editors/rect-editor.svelte";
 import { RectSelectionHelper } from "@lib/infinite-whiteboard/helpers/rect-selection-helper.svelte";
 

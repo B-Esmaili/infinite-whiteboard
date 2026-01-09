@@ -14,7 +14,7 @@ export interface AppContext {
     getElementsInRange(bounds: Bounds): WhiteboardElement[];
     setSelectedElements(elements: WhiteboardElement[]): void;
     getSelectedElements(): WhiteboardElement[];
-    addElement: (element: Omit<WhiteboardElement, 'uid' | 'register' | 'unRegister' | 'graphics' | 'transform' | 'updateViewModel'>) => WhiteboardElement;
+    addElement: (element: Omit<WhiteboardElement, 'uid' | 'register' | 'unRegister' | 'graphics' | 'transform' | 'updateViewModel' | 'rotations'>) => WhiteboardElement;
     removeElement: (element: string) => void;
 }
 
@@ -71,27 +71,33 @@ export type WidgetEditorModel = {
 type ViewModelType = Record<PropertyKey, unknown> | object;
 
 export type DragDropAdapter<TViewModel extends ViewModelType> = (element: WhiteboardElement<TViewModel>, offset: Point) => TViewModel;
-export type RotateAdapter<TViewModel extends ViewModelType> = (element: WhiteboardElement<TViewModel>, degree: number) => TViewModel;
+export type RotateAdapter<TViewModel extends ViewModelType> = (element: WhiteboardElement<TViewModel>, rotation: number) => TViewModel;
 export type ScaleAdapter<TViewModel extends ViewModelType> = (
     element: WhiteboardElement<TViewModel>,
-    applyScale: (bounds : Bounds) => Bounds,
-    finalize : boolean
+    applyScale: (bounds: Bounds) => Bounds,
+    finalize: boolean
 ) => TViewModel | GraphicsContext;
 export type TransformOptions<TViewModel extends ViewModelType = Record<PropertyKey, unknown>> = {
     onStart?: () => void;
     onEnd?: (offset: Point) => void;
     onProgress?: (offset: Point) => void;
     moveAdapter?: DragDropAdapter<TViewModel>;
-    roateAdapter?: RotateAdapter<TViewModel>;
+    //roateAdapter?: RotateAdapter<TViewModel>;
     scaleAdapter?: ScaleAdapter<TViewModel>;
 }
 
 export interface ElementRegisterOptions<TViewModel extends ViewModelType> {
     selectable: boolean;
     draggable?: false | Omit<TransformOptions<TViewModel>, 'roateAdapter' | 'scaleAdapter'>;
-    rotatable?: false | Omit<TransformOptions<TViewModel>, 'moveAdapter' | 'scaleAdapter'>
+    //rotatable?: false | Omit<TransformOptions<TViewModel>, 'moveAdapter' | 'scaleAdapter'>
+    rotatable: boolean;
     scalable?: false | Omit<TransformOptions<TViewModel>, 'roateAdapter' | 'moveAdapter'>
 };
+
+export interface Rotation {
+    rotation: number;
+    pivot: { x: number, y: number };
+}
 
 export interface WhiteboardElement<TModel extends ViewModelType = Record<PropertyKey, unknown>, TEditorModel extends Record<PropertyKey, unknown> | object = Record<PropertyKey, unknown>> {
     uid: string;
@@ -103,6 +109,7 @@ export interface WhiteboardElement<TModel extends ViewModelType = Record<Propert
     editorModel?: TEditorModel,
     register: (el: WhiteboardElement<TModel>, options: ElementRegisterOptions<TModel>) => void;
     unRegister: (el: WhiteboardElement<TModel>) => void;
-    transform: Transform;
+    //transform: Transform;
+    rotations: Rotation[];
     updateViewModel: (payload: Partial<TModel>) => void;
 }

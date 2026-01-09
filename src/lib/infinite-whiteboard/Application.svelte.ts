@@ -1,13 +1,13 @@
 import { unwrapValue } from "$lib/utils/misc.ts";
 import type { MaybeUnwrap } from "$lib/utils/types.ts";
-import { Container, Graphics, Point, type ApplicationOptions, type Bounds } from "pixi.js";
+import { Container, Graphics, Matrix, Point, Transform, type ApplicationOptions, type Bounds } from "pixi.js";
 import { Application as PixiApp } from "pixi.js"
 import type { AppContext, ContainerContext, ToolboxItem, ViewportContext, WhiteboardElement } from "./types.ts";
 import { mount, setContext, unmount } from "svelte";
 import { Toolbar, type ToolbarItem } from "./toolbar/toolbar.svelte.ts";
 import ToolboxItems from "./toolbox-items";
 import type { Grid } from "./grid.svelte.ts";
-import ViewPort from "./widgets/view-port.svelte";
+import ViewPort from "./elements/view-port.svelte";
 import { watch } from "runed";
 import { SvelteMap } from "svelte/reactivity";
 import { Selection } from "./selection.svelte.ts";
@@ -15,6 +15,9 @@ import { AddElementUndoCommand } from "./commands/add-object-command.ts";
 import { CommandManager } from "./commands/command-history.svelte.ts";
 import { v4 as uuidv4 } from 'uuid';
 import { TransformManager, type TransformElement } from "./helpers/transform-manager.svelte.ts";
+import { ElementFlags } from "typescript";
+import ElementHost from "./elements/internal/element-host.svelte";
+import { } from "svelte/reactivity";
 
 export interface ApplicaionProps {
     element: HTMLCanvasElement;
@@ -60,6 +63,7 @@ export class Application {
         this.#elements.push(element);
 
         element.graphics = new Graphics();
+        element.rotations = [];
 
         element.updateViewModel = (payload) => {
             element.viewModel = {
@@ -69,16 +73,14 @@ export class Application {
         }
 
         element.register = (el, options) => {
-            const viewport = this.#viewportContex.viewport;
-            viewport.addChild(el.graphics);
-
-
+            //const viewport = this.#viewportContex.viewport;
+            //viewport.addChild(el.graphics);
             if (options.selectable) {
                 this.registerSelection(el);
             }
 
             if (options.draggable || options.scalable || options.rotatable) {
-                this.#transformManager?.registerElement(element, {
+                this.#transformManager?.registerElement(el, {
                     draggable: options.draggable,
                     scalable: options.scalable,
                     rotatable: options.rotatable,
@@ -87,7 +89,7 @@ export class Application {
         };
 
         element.unRegister = (el) => {
-            this.#viewportContex.viewport.removeChild(el.graphics);
+            //this.#viewportContex.viewport.removeChild(el.graphics);
 
             if (this.#selection?.isElementRegistered(el)) {
                 this.unRegisterSelection(el);
@@ -98,12 +100,15 @@ export class Application {
             }
         };
 
-        const el = this.#elements[this.#elements.length - 1]; // Get element from $state list so that we be able to update it 
+        let el = this.#elements[this.#elements.length - 1]; // Get element from $state list so that we be able to update it         
 
-        const instance = mount(element.view, {
+        const instance = mount(ElementHost, {
             target: document.body,
-            props: el,
-            context: this.#contexts,
+            props: {
+                componentProps: el,
+                componentType: el.view
+            },
+            context: this.#contexts
         });
 
         this.#viewInstances.set(element.uid, instance);
@@ -130,17 +135,28 @@ export class Application {
         }
 
         return el;
-    }   
+    }
 
     removeElement(uid: string) {
         this.removeElementInternal(uid);
     }
 
-    private updateElementInternal(uid: string, viewModel: Record<PropertyKey, unknown>) {
-        const el = this.#elements.find(e => e.uid === uid);
+    private updateElementInternal(uid: string, payload: Partial<WhiteboardElement> | ((e: WhiteboardElement) => any)) {
+        const elIndex = this.#elements.findIndex(e => e.uid === uid);
 
-        if (el) {
-            el.viewModel = $state.snapshot(viewModel);
+        if (elIndex < 0) {
+            return;
+        }
+
+        if (typeof (payload) === "function") {
+            let item = this.#elements[elIndex];
+            payload(item);
+            this.#elements[elIndex] = item;
+        } else {
+            this.#elements[elIndex] = {
+                ...this.#elements[elIndex],
+                ...payload
+            }
         }
     }
 
@@ -220,24 +236,44 @@ export class Application {
 
         this.#commandManager = new CommandManager(this.#viewportContex);
 
+        const _this = this;
         this.#transformManager = new TransformManager(() => this.#containerContext?.container, () => this.#viewportContex?.viewport, () => this.#selection!, {
-            onMoveProgress: (offset: Point, elements: TransformElement[]) => {
-                for (const el of elements) {
-                    if (el.draggable) {
-                        const updatedVm = el.draggable?.moveAdapter?.(el.element, offset) ?? el.element.viewModel;
-                        this.updateElementInternal(el.element.uid, updatedVm);
+            onMoveProgress: (offset: Point, el: TransformElement) => {
+                if (el.draggable) {
+
+                    const updatedVm = el.draggable?.moveAdapter?.(el.element, { x: offset.x, y: offset.y } as Point) ?? el.element.viewModel;
+
+                    this.updateElementInternal(el.element.uid, (exEl) => {
+                        if (exEl) {
+                            exEl.viewModel = $state.snapshot(updatedVm);
+                        }
+                    });
+                }
+            },
+            onScaleProgress: (applyScale: (bounds: Bounds) => Bounds, el: TransformElement, done: boolean) => {                
+                if (el.scalable) {
+                    const updatedData = el.scalable.scaleAdapter?.(el.element, applyScale, done) ?? el.element.viewModel;
+                    if (done) {
+                        this.updateElementInternal(el.element.uid, (exEl) => {
+                            if (exEl) {
+                                exEl.viewModel = $state.snapshot(updatedData);
+                            }
+                        });
+                    } else {
+                        el.element.graphics.context = updatedData;
                     }
                 }
             },
-            onScaleProgress: (applyScale: (bounds: Bounds) => Bounds, elements: TransformElement[], done: boolean) => {
+            onRotate: (elements: TransformElement[], rotation: number, pivot: Point) => {
+
                 for (const el of elements) {
-                    if (el.scalable) {
-                        const updatedData = el.scalable.scaleAdapter?.(el.element, applyScale, done) ?? el.element.viewModel;
-                        if (done) {
-                            this.updateElementInternal(el.element.uid, updatedData);
-                        } else {
-                            el.element.graphics.context = updatedData;
-                        }
+                    if (el.rotatable) {
+                        this.updateElementInternal(el.element.uid, (exEl) => {
+                            exEl.rotations = [...exEl.rotations, {
+                                rotation,
+                                pivot
+                            }];
+                        });
                     }
                 }
             }

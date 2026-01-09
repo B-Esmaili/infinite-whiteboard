@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Application } from './Application.svelte.ts';
 	import { getAppContext } from './context.svelte.ts';
-	import ViewPort from './widgets/view-port.svelte';
+	import ViewPort from './elements/view-port.svelte';
 	import type { Grid } from './grid.svelte.ts';
 	import ToolbarView from './toolbar/toolbar-view.svelte';
 	const { children } = $props();

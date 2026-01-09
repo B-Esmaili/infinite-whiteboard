@@ -4,7 +4,7 @@ import { extract, type MaybeGetter } from "runed";
 import type { Viewport } from "pixi-viewport";
 
 export interface DragDropHelperOptions {
-    onStart: () => void;
+    onStart: (location : Point) => void;
     onEnd: (offset: Point) => void;
     onMove: (offset: Point) => void;
 }
@@ -40,17 +40,14 @@ export class DragDropHelper {
         });
     }
 
-    private handleDragStart(e: FederatedPointerEvent) {
-        // if (!this.isGraphicsRegistered(e.target as Graphics)) {
-        //     return;
-        // }
+    private handleDragStart(e: FederatedPointerEvent) {      
         e.stopImmediatePropagation();
         e.stopPropagation();
         const worldCoords = this.#viewport?.toWorld(new Point(e.x, e.y))!;
 
         this.#isDown = true;
         this.#startPos = new Point(worldCoords.x, worldCoords.y);
-        this.#options.onStart?.();
+        this.#options.onStart?.(this.#startPos);
     }
 
     private handleDragMove(e: FederatedPointerEvent) {

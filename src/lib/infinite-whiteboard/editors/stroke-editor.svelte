@@ -5,6 +5,6 @@
 </script>
 
 <div>
-	<label> مرز </label>
+	<label for="border"> مرز </label>
     
 </div>
