@@ -1,7 +1,6 @@
 <script lang="ts" module>
 	import { getViewPortContext } from '@lib/infinite-whiteboard/context.svelte';
-	import type { ElementRegisterOptions, WhiteboardElement } from '@lib/infinite-whiteboard/types';
-	import type { Viewport } from 'pixi-viewport';
+	import type { WhiteboardElement } from '@lib/infinite-whiteboard/types';
 	import { Container, Graphics } from 'pixi.js';
 	import { watch } from 'runed';
 	import type { Component } from 'svelte';
@@ -28,21 +27,8 @@
 		gr.pivot.set(0, 0);
 	}
 
-	//const parentMap = new Map<number,>();
 	let parent = $derived.by(() => {
-		if (compProps.rotations.length) {
-			let current: Container | Viewport | null = compProps.graphics;
-			let foundRotationParents = [];
-
-			// while (current !== viewPortContext.viewport) {
-			// 	if (current === null) {
-			// 		break;
-			// 	}
-			// 	if (current.label.startsWith('rotate')) {
-			// 		foundRotationParents.push([current.rotation, current.pivot]);
-			// 	}
-			// 	current = current.parent;
-			// }
+		if (compProps.rotations.length) {								
 
 			let innermostParent;
 			const outerParent = compProps.rotations.reduce(
@@ -114,14 +100,6 @@
 		};
 	});
 
-	// let wraps = $derived.by(() => {
-
-	// 	if (compProps.rotations.length) {
-	// 		return [];
-	// 	}
-
-	// 	return compProps.rotations.reduce((p, c) => {}, null);
-	// });
 </script>
 
 <props.componentType props={compProps}></props.componentType>

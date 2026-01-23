@@ -13,7 +13,6 @@
 	import { getAppContext, getViewPortContext } from '../context.svelte.ts';
 	import { drawRect } from '../helpers/drawing-helper.ts';
 	import type { WhiteboardElement } from '../types.ts';
-	import { watch } from 'runed';
 
 	let props: { props: WhiteboardElement<RectViewModel> } = $props();
 	
@@ -93,26 +92,6 @@
 			rotatable: true
 		});
 	}
-
-	// $effect(() => {
-	// 	console.log('props.componentProps');
-	// 	console.log(props.props.rotations);
-	// });
-
-	//watch(()=>props.props.rotations,(r)=>registerElement());
-
-	// $effect.pre(()=>{
-	// 	console.log("props.props.rotations");
-	// 	console.log(props.props);
-	// })
-
-	//watch(()=>props.props.rotations , ()=> registerElement(el) , {lazy : true})
-
-	// watch(
-	// 	() => props.props.rotations,
-	// 	(_el) => console.log(_el),
-	// 	{ lazy: true }
-	// );
 
 	$effect(() => {
 		if (viewportContext && appContext) {

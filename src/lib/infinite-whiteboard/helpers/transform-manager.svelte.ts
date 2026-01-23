@@ -6,8 +6,6 @@ import { drawRect } from "./drawing-helper";
 import type { Viewport } from "pixi-viewport";
 import { DragDropHelper } from "./drag-drop-helper.svelte";
 import { tick } from "svelte";
-import { degToRadian } from "./math-utils";
-
 
 export interface DragDropOptions {
     onMoveProgress: (offset: Point, element: TransformElement) => void;
@@ -42,7 +40,6 @@ export class TransformManager {
     #initialBounds = $state(new Bounds());
     #currentBounds = $state<Bounds | null>(null);
     #currentSelection: WhiteboardElement[];
-    #rotationOffsets: Point[] = [];
 
     constructor(container: MaybeGetter<Container>, viewport: MaybeGetter<Viewport>, selection: MaybeGetter<Selection>, options: MaybeGetter<DragDropOptions>) {
         this.#options = $derived(extract(options));
@@ -255,8 +252,6 @@ export class TransformManager {
         this.endScale(offset, "lt");
     }
 
-    // Right Bottom Drag Handle
-
     private handleStartRightBottomResize() {
         this.startScale();
     }
@@ -268,10 +263,6 @@ export class TransformManager {
     private handleEndRightBottomResize(offset: Point) {
         this.endScale(offset, "rb");
     }
-
-    //End Right Bottom Drag Handle
-
-    // Left Bottom Drag Handle
 
     private handleStartLeftBottomResize() {
         this.startScale();
@@ -285,11 +276,6 @@ export class TransformManager {
         this.endScale(offset, "lb");
     }
 
-    //End Left Bottom Drag Handle
-
-
-    // Right Top Drag Handle
-
     private handleStartRightTopResize() {
         this.startScale();
     }
@@ -302,21 +288,13 @@ export class TransformManager {
         this.endScale(offset, "rt");
     }
 
-    //End Right Top Drag Handle
-
     private handleStartMove() {
         const selectedDraggableItems = this.getManyElements(this.#currentSelection);
         this.reparentSelectionToTransformContainer(selectedDraggableItems);
     }
 
-    private handleMove(offset: Point) {
-        //const selectedDraggableItems = this.getManyElements(this.#currentSelection);
-
-        //const offsetX = this.#cumulativeOffset.x + offset.x;
-        //const offsetY = this.#cumulativeOffset.y + offset.y;
-        //for (const sel of selectedDraggableItems) {
-        this.#transformContainer?.position.set(offset.x, offset.y);
-        //}
+    private handleMove(offset: Point) {       
+        this.#transformContainer?.position.set(offset.x, offset.y);      
     }
 
     private applyRotationToPoint(gr: Graphics, point: Point) {
@@ -335,9 +313,6 @@ export class TransformManager {
             const newOffset = this.applyRotationToPoint(sel.element.graphics, offset);
             this.#options.onMoveProgress(new Point(newOffset.x, newOffset.y), sel);
         }
-
-        //this.#options.onMoveProgress(new Point(offset.x, offset.y), selectedDraggableItems);
-        //this.#cumulativeOffset = new Point(offset.x + this.#cumulativeOffset.x, offset.y + this.#cumulativeOffset.y);
 
         await tick();
 
@@ -386,10 +361,6 @@ export class TransformManager {
 
         if (this.#transformItemsWrap && this.#transformGraphicsWrap) {
 
-            //const aggOffset = this.aggrigateOffset(this.#rotationOffsets.concat(offset));
-
-            //this.#transformGraphicsWrap.rotation = Math.atan2(aggOffset.x,aggOffset.y);
-
             const curRotation = this.#transformItemsWrap.rotation;
             this.#transformItemsWrap.rotation = 0;
 
@@ -404,16 +375,11 @@ export class TransformManager {
                 this.#options.onRotate(selectedElements, curRotation, { x: this.#transformItemsWrap.pivot.x, y: this.#transformItemsWrap.pivot.y } as Point);
             }
 
-            //this.#transformItemsWrap.rotation = curRotation;
-            //this.#transformGraphicsWrap.rotation = curRotation;
-            //this.#transformGraphicsWrap.rotation = curRotation;
-
             tick().then(() => {
                 this.hideTransformGraphics();
                 this.handleSelectionChange($state.eager(this.#selection.currentSelection));
             });
 
-            this.#rotationOffsets.push(offset);
         }
     }
 
@@ -556,9 +522,6 @@ export class TransformManager {
                 });
             }
 
-            // const minPt = this.#viewport.toWorld(bounds.minX, bounds.minY);
-            // const maxPt = this.#viewport.toWorld(bounds.maxX, bounds.maxY);
-
             const pad = 5;
 
             drawRect(this.#transformGraphics, bounds.minX - pad, bounds.minY - pad, bounds.maxX + pad, bounds.maxY + pad, {
@@ -587,9 +550,6 @@ export class TransformManager {
         if (this.#transformContainer) {
             this.#viewport.removeChild(this.#transformContainer);
             this.#transformGraphics = null;
-            //this.#transformContainer.rotation = 0;
-            //this.#transformContainer.pivot.set(0, 0);
-            //this.#transformContainer.position.set(0, 0);
         }
     }
 
@@ -597,8 +557,6 @@ export class TransformManager {
         if (!this.#container) {
             return;
         }
-
-        this.#rotationOffsets = [];
 
         this.refreshBounds(selection);
     }
